@@ -3841,7 +3841,11 @@ def list_saved_answer_keys(request):
 # ------------------------------------------------------------------------------
 # WIA SCANNER JSON API (OPTIONAL, FOR FLATBED SCANNER)
 # ------------------------------------------------------------------------------
-
+Python
+import os
+import uuid
+import sys  
+from django.conf import settings
 # Conditional imports for Windows features
 if sys.platform == "win32":
     import pythoncom
