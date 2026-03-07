@@ -90,9 +90,6 @@ from pathlib import Path
 import json
 import sys
 
-if sys.platform == "win32":
-    import pythoncom
-
 from .omr_knn.omr_knn_pipeline import (
     load_knn_model,
     analyze_sheet,
