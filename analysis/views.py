@@ -82,13 +82,16 @@ import re
 import cv2
 import uuid
 import base64
-import pythoncom
 import win32com.client
 from django.db import IntegrityError
 from django.utils import timezone
 from datetime import datetime
 from pathlib import Path
 import json
+import sys
+
+if sys.platform == "win32":
+    import pythoncom
 
 from .omr_knn.omr_knn_pipeline import (
     load_knn_model,
@@ -3842,17 +3845,33 @@ def list_saved_answer_keys(request):
 # WIA SCANNER JSON API (OPTIONAL, FOR FLATBED SCANNER)
 # ------------------------------------------------------------------------------
 
+# Conditional imports for Windows features
+if sys.platform == "win32":
+    import pythoncom
+    import win32com.client
+else:
+    pythoncom = None
+    win32com = None
+
 @csrf_exempt
 @login_required
 def scan_document_api(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "POST required"}, status=400)
 
+    # Detect if we are on a server that doesn't support local hardware scanning
+    if sys.platform != "win32":
+        return JsonResponse({
+            "status": "error", 
+            "message": "Hardware scanning is only supported on Windows local environments. Please upload a file instead."
+        }, status=501)
+
     institution = get_current_institution(request)
     if not institution:
         return JsonResponse({"status": "error", "message": "No institution context found."}, status=400)
 
     try:
+        # Initialize Windows COM library
         pythoncom.CoInitialize()
 
         wia = win32com.client.Dispatch("WIA.CommonDialog")
@@ -3866,6 +3885,7 @@ def scan_document_api(request):
         if not image:
             return JsonResponse({"status": "cancelled", "message": "Scan cancelled by user."})
 
+        # Set up directory
         scan_dir = os.path.join(
             settings.MEDIA_ROOT,
             "scans",
@@ -3877,16 +3897,18 @@ def scan_document_api(request):
         filename = f"scan_{uuid.uuid4().hex}.jpg"
         file_path = os.path.join(scan_dir, filename)
 
+        # Save the file
         image.SaveFile(file_path)
 
         rel = os.path.relpath(file_path, settings.MEDIA_ROOT).replace("\\", "/")
         return JsonResponse({"status": "success", "file": settings.MEDIA_URL + rel})
 
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        return JsonResponse({"status": "error", "message": f"Windows Scan Error: {str(e)}"}, status=500)
     finally:
         try:
-            pythoncom.CoUninitialize()
+            if pythoncom:
+                pythoncom.CoUninitialize()
         except Exception:
             pass
 
