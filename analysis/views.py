@@ -3841,56 +3841,6 @@ def list_saved_answer_keys(request):
 # ------------------------------------------------------------------------------
 # WIA SCANNER JSON API (OPTIONAL, FOR FLATBED SCANNER)
 # ------------------------------------------------------------------------------
-@csrf_exempt
-@login_required
-def scan_document_api(request):
-
-    if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "POST required"}, status=400)
-
-    # Railway runs Linux, so block scanning
-    if sys.platform != "win32":
-        return JsonResponse({
-            "status": "error",
-            "message": "Hardware scanning only works on Windows computers."
-        }, status=501)
-
-    try:
-        # Import Windows-only modules here
-        import pythoncom
-        import win32com.client
-
-        pythoncom.CoInitialize()
-
-        wia = win32com.client.Dispatch("WIA.CommonDialog")
-        image = wia.ShowAcquireImage(
-            DeviceType=1,
-            Intent=1,
-            FormatID="{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}",
-            AlwaysSelectDevice=False,
-        )
-
-        if not image:
-            return JsonResponse({"status": "cancelled"})
-
-        scan_dir = os.path.join(settings.MEDIA_ROOT, "scans")
-        os.makedirs(scan_dir, exist_ok=True)
-
-        filename = f"scan_{uuid.uuid4().hex}.jpg"
-        file_path = os.path.join(scan_dir, filename)
-
-        image.SaveFile(file_path)
-
-        return JsonResponse({"status": "success"})
-
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)})
-
-    finally:
-        try:
-            pythoncom.CoUninitialize()
-        except:
-            pass
 
 
 # ------------------------------------------------------------------------------
