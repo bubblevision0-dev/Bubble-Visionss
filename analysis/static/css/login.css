@@ -8,7 +8,7 @@ body {
     font-family: 'Poppins', sans-serif;
 
     /* Bright school-themed background */
-    background: url('../images/school-bg.jpg');
+    /* background: url('../images/school-bg.jpg'); */
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
