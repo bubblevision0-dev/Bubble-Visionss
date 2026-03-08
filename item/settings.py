@@ -27,6 +27,15 @@ SECRET_KEY = 'django-insecure-yzoy$ls^u(^(_=cw_mrj#^%^r-@d6ssr#&i7folp(==5p8vi*)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
+CSRF_TRUSTED_ORIGINS = ['https://bubble-vision.up.railway.app']
+
+# Only redirect to SSL if we are NOT in debug mode (production)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+else:
+    SECURE_SSL_REDIRECT = False
+
 ALLOWED_HOSTS = ['bubble-vision.up.railway.app', '127.0.0.1', 'localhost']
 # or
 # ALLOWED_HOSTS = ["192.168.1.8", "localhost"] # house
