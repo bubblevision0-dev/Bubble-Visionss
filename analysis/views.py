@@ -3841,78 +3841,56 @@ def list_saved_answer_keys(request):
 # ------------------------------------------------------------------------------
 # WIA SCANNER JSON API (OPTIONAL, FOR FLATBED SCANNER)
 # ------------------------------------------------------------------------------
-Python
-import os
-import uuid
-import sys  
-from django.conf import settings
-# Conditional imports for Windows features
-if sys.platform == "win32":
-    import pythoncom
-    import win32com.client
-else:
-    pythoncom = None
-    win32com = None
-
 @csrf_exempt
 @login_required
 def scan_document_api(request):
+
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "POST required"}, status=400)
 
-    # Detect if we are on a server that doesn't support local hardware scanning
+    # Railway runs Linux, so block scanning
     if sys.platform != "win32":
         return JsonResponse({
-            "status": "error", 
-            "message": "Hardware scanning is only supported on Windows local environments. Please upload a file instead."
+            "status": "error",
+            "message": "Hardware scanning only works on Windows computers."
         }, status=501)
 
-    institution = get_current_institution(request)
-    if not institution:
-        return JsonResponse({"status": "error", "message": "No institution context found."}, status=400)
-
     try:
-        # Initialize Windows COM library
+        # Import Windows-only modules here
+        import pythoncom
+        import win32com.client
+
         pythoncom.CoInitialize()
 
         wia = win32com.client.Dispatch("WIA.CommonDialog")
         image = wia.ShowAcquireImage(
             DeviceType=1,
             Intent=1,
-            FormatID="{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}",  # JPG
+            FormatID="{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}",
             AlwaysSelectDevice=False,
         )
 
         if not image:
-            return JsonResponse({"status": "cancelled", "message": "Scan cancelled by user."})
+            return JsonResponse({"status": "cancelled"})
 
-        # Set up directory
-        scan_dir = os.path.join(
-            settings.MEDIA_ROOT,
-            "scans",
-            _safe_folder_name(institution.name),
-            _safe_folder_name(institution.school_year),
-        )
+        scan_dir = os.path.join(settings.MEDIA_ROOT, "scans")
         os.makedirs(scan_dir, exist_ok=True)
 
         filename = f"scan_{uuid.uuid4().hex}.jpg"
         file_path = os.path.join(scan_dir, filename)
 
-        # Save the file
         image.SaveFile(file_path)
 
-        rel = os.path.relpath(file_path, settings.MEDIA_ROOT).replace("\\", "/")
-        return JsonResponse({"status": "success", "file": settings.MEDIA_URL + rel})
+        return JsonResponse({"status": "success"})
 
     except Exception as e:
-        return JsonResponse({"status": "error", "message": f"Windows Scan Error: {str(e)}"}, status=500)
+        return JsonResponse({"status": "error", "message": str(e)})
+
     finally:
         try:
-            if pythoncom:
-                pythoncom.CoUninitialize()
-        except Exception:
+            pythoncom.CoUninitialize()
+        except:
             pass
-
 
 
 # ------------------------------------------------------------------------------
