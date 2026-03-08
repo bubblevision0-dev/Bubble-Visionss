@@ -82,7 +82,6 @@ import re
 import cv2
 import uuid
 import base64
-import win32com.client
 from django.db import IntegrityError
 from django.utils import timezone
 from datetime import datetime
