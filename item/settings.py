@@ -94,11 +94,15 @@ WSGI_APPLICATION = 'item.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
+        # This looks for DATABASE_URL environment variable
         default=os.environ.get('DATABASE_URL', 'postgresql://postgres:12345@localhost:5432/bubblevision'),
         conn_max_age=600,
-        ssl_require=True 
     )
 }
+
+# Add SSL requirements ONLY if we are in production (Railway)
+if os.environ.get('DATABASE_URL'):
+    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
