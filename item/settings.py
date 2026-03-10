@@ -90,26 +90,29 @@ WSGI_APPLICATION = 'item.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        # This will be empty if DATABASE_URL is not set
-        conn_max_age=600,
-    )
-}
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# If we are NOT on Railway (local dev), manually set the local DB
-if not os.environ.get('DATABASE_URL'):
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bubblevision',
-        'USER': 'postgres',
-        'PASSWORD': '123',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
+if DATABASE_URL:
+    # We are in PRODUCTION (Railway)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
 else:
-    # We ARE on Railway, enforce SSL
-    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+    # We are in LOCAL DEVELOPMENT (Your computer)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'bubblevision',
+            'USER': 'postgres',
+            'PASSWORD': 'your_local_password',
+            'HOST': '127.0.0.1',
+            'PORT': '5432',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
