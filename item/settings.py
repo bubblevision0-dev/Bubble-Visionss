@@ -94,12 +94,11 @@ WSGI_APPLICATION = 'item.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        # This is your LOCAL database link (the one on your computer)
-        default='postgresql://postgres:12345@localhost:5432/bubblevision',
-        conn_max_age=600
+        default=os.environ.get('DATABASE_URL', 'postgresql://postgres:12345@localhost:5432/bubblevision'),
+        conn_max_age=600,
+        ssl_require=True 
     )
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
