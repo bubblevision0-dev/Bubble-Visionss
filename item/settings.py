@@ -93,16 +93,18 @@ WSGI_APPLICATION = 'item.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    # We are in PRODUCTION (Railway)
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True
         )
     }
+    # FORCE SSL FOR RAILWAY
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
 else:
-    # We are in LOCAL DEVELOPMENT (Your computer)
+    # Local fallback
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
