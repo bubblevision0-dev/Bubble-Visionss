@@ -3477,7 +3477,7 @@ def user_profile(request):
 
     return render(
         request,
-        "analysis/users/User_profile.html",
+        "analysis/users/user_profile.html",
         {"password_form": password_form},
     )
     
