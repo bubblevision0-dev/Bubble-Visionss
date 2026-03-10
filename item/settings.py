@@ -94,15 +94,26 @@ WSGI_APPLICATION = 'item.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        # This looks for DATABASE_URL environment variable
-        default=os.environ.get('DATABASE_URL', 'postgresql://postgres:12345@localhost:5432/bubblevision'),
         conn_max_age=600,
+        conn_health_checks=True,
     )
 }
 
-# Add SSL requirements ONLY if we are in production (Railway)
+# 2. Fallback for local development if DATABASE_URL is missing
+if not DATABASES.get('default'):
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bubblevision',
+        'USER': 'postgres',
+        'PASSWORD': '123',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+
+# 3. Handle SSL for Railway (Postgres requires this on their platform)
 if os.environ.get('DATABASE_URL'):
-    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['sslmode'] = 'require'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
