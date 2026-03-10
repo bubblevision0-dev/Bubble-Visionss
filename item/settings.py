@@ -26,7 +26,15 @@ SECRET_KEY = 'django-insecure-yzoy$ls^u(^(_=cw_mrj#^%^r-@d6ssr#&i7folp(==5p8vi*)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    "https://bubble-vision-production.up.railway.app",
+]
+
+ALLOWED_HOSTS = [
+"bubble-vision-production.up.railway.app",
+    "127.0.0.1",
+    "localhost",
+]
 # or
 # ALLOWED_HOSTS = ["192.168.1.8", "localhost"] # house
 #ALLOWED_HOSTS = ["192.168.1.14", "localhost"] # kabila
@@ -49,13 +57,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'item.urls'
