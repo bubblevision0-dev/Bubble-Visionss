@@ -163,7 +163,6 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- MEDIA FILES CONFIGURATION ---
 MEDIA_URL = "/media/"
 
 if os.environ.get('DATABASE_URL'):
