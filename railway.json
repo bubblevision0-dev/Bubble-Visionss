@@ -1,10 +1,9 @@
 {
   "$schema": "https://railway.app/railway.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "RAILPACK"
   },
   "deploy": {
-    "startCommand": "gunicorn item.wsgi",
-    "postdeploy": "python manage.py migrate && python manage.py collectstatic --noinput"
+    "startCommand": "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn item.wsgi"
   }
 }
