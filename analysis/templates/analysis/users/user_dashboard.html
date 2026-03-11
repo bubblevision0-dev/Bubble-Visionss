@@ -691,10 +691,11 @@
                   <select id="subject" name="subject" required disabled style="width:100%;padding:12px;border-radius:10px;border:1px solid #e2e8f0;"><option value="">Subject</option></select>
               </div>
               <div>
-                  <label style="font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;">Bubble Test Key (CSV)</label>
-
+                  <label style="font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;">
+                      Answer Key File (CSV, Excel, Word, PDF, or Text)
+                  </label>
                   {# CHANGED: not required by default here; JS will require in "create" #}
-                  <input type="file" name="answer_key" id="file_key" accept=".csv" style="margin-top:8px;">
+                  <input type="file" name="answer_key" id="file_key" style="margin-top:8px;">
 
                   <div id="current_key_info"></div>
               </div>
