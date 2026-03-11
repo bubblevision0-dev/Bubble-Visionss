@@ -4044,11 +4044,11 @@ def scan_document(request, pk):
         base_dir = os.path.join(
             settings.MEDIA_ROOT,
             "bubble_scans",
-            _safe_folder_name(institution.name),
-            _safe_folder_name(institution.school_year),
-            _safe_folder_name(answer_key.grade.name),
-            _safe_folder_name(answer_key.section.name),
-            _safe_folder_name(answer_key.subject.name),
+            str(institution.id),        # Short ID
+            _safe_folder_name(institution.school_year), 
+            str(answer_key.grade.id),   # Short ID
+            str(answer_key.section.id), # Short ID
+            str(answer_key.subject.id), # Short ID
         )
         os.makedirs(base_dir, exist_ok=True)
 
