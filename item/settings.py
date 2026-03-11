@@ -110,7 +110,7 @@ else:
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': 'bubblevision',
             'USER': 'postgres',
-            'PASSWORD': 'your_local_password',
+            'PASSWORD': '12345',
             'HOST': '127.0.0.1',
             'PORT': '5432',
         }
