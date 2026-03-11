@@ -171,3 +171,5 @@ if os.environ.get('DATABASE_URL'):
 else:
         # Para sa iyong sariling computer (localhost)
     MEDIA_ROOT = BASE_DIR / "media"
+
+MEDIA_URL = "/media/"
