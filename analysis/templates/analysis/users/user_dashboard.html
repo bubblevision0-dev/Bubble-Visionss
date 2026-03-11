@@ -691,17 +691,21 @@
                   <select id="subject" name="subject" required disabled style="width:100%;padding:12px;border-radius:10px;border:1px solid #e2e8f0;"><option value="">Subject</option></select>
               </div>
               <div>
-                  <label style="font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;">
-                    Upload Key (CSV, PDF, Word, Excel)
+                <label style="font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;">
+                    Bubble Test Key (CSV, Word, Excel, PDF)
                 </label>
+            
                 <input type="file" 
                        name="answer_key" 
                        id="file_key" 
                        accept=".csv, .pdf, .doc, .docx, .xls, .xlsx" 
                        style="margin-top:8px; width: 100%;">
-
-                  <div id="current_key_info"></div>
-              </div>
+            
+                <div id="current_key_info"></div>
+                <small style="color: #64748b; font-size: 10px; display: block; margin-top: 4px;">
+                    Note: Files should list answers in a single column or line.
+                </small>
+            </div>
           </div>
 
           <button type="submit" id="submitBtn" class="gp-btn active" style="width:100%;margin-top:20px;padding:14px;justify-content:center;display:flex;align-items:center;gap:8px;">
