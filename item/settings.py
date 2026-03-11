@@ -170,9 +170,5 @@ if os.environ.get('DATABASE_URL'):
     # Para sa Railway Volume mount path
     MEDIA_ROOT = '/app/media'
 else:
-    # Para sa iyong sariling computer (localhost)
-<<<<<<< HEAD
+        # Para sa iyong sariling computer (localhost)
     MEDIA_ROOT = BASE_DIR / "media"
-=======
-    MEDIA_ROOT = BASE_DIR / "media"
->>>>>>> 4584abe (Run collectstatic for CSS)
