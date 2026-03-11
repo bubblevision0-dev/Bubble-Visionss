@@ -3169,7 +3169,48 @@ def user_tally_per_item(request, answer_key_id):
         "scanned_count": scanned_count,
         "items": items
     })
-    
+
+def parse_any_file(uploaded_file):
+    ext = os.path.splitext(uploaded_file.name)[1].lower()
+    answers = []
+
+    try:
+        if ext == '.csv':
+            # Gamitin ang existing na function mo o pandas
+            df = pd.read_csv(uploaded_file, header=None)
+            answers = df[0].astype(str).tolist()
+
+        elif ext in ['.xlsx', '.xls']:
+            df = pd.read_excel(uploaded_file, header=None)
+            answers = df[0].astype(str).tolist()
+
+        elif ext in ['.docx', '.doc']:
+            doc = Document(uploaded_file)
+            answers = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+
+        elif ext == '.pdf':
+            reader = PdfReader(uploaded_file)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text()
+            answers = [line.strip() for line in text.splitlines() if line.strip()]
+
+        elif ext == '.txt':
+            content = uploaded_file.read().decode('utf-8')
+            answers = [line.strip() for line in content.splitlines() if line.strip()]
+
+        # Linisin ang mga sagot (tanggalin ang numbers kung mayroon, e.g., "1. A" -> "A")
+        cleaned_answers = []
+        for a in answers:
+            # Simple regex logic o string split para makuha lang ang huling letra
+            val = a.split()[-1].upper() if ' ' in a else a.upper()
+            cleaned_answers.append(val)
+        return cleaned_answers
+
+    except Exception as e:
+        print(f"Error parsing file: {e}")
+        return []
+        
 @require_POST
 @login_required
 def upload_answer_key(request):
@@ -3187,15 +3228,14 @@ def upload_answer_key(request):
 
     if not all([quiz_name, gp_id, grade_id, section_id, subject_id]):
         msg = "Missing required fields for upload."
-        if is_ajax:
-            return JsonResponse({"ok": False, "error": msg}, status=400)
+        if is_ajax: return JsonResponse({"ok": False, "error": msg}, status=400)
         messages.error(request, msg)
         return redirect("user_dashboard")
 
     try:
-        answers_raw = read_answer_key_file(uploaded_file) if uploaded_file else []
+        # Gagamitin ang bagong multi-format parser
+        answers_raw = parse_any_file(uploaded_file) if uploaded_file else []
 
-        # find existing assessment with SAME quiz_name
         existing_key = AnswerKey.objects.filter(
             user=request.user,
             institution=institution,
@@ -3208,9 +3248,12 @@ def upload_answer_key(request):
         ).first()
 
         if not existing_key and not uploaded_file:
-            raise ValueError("A CSV file is required for new answer keys.")
+            raise ValueError("A valid file is required for new answer keys.")
 
         item_count = len(answers_raw) if uploaded_file else int(existing_key.total_items or 0)
+        
+        if item_count == 0 and uploaded_file:
+            raise ValueError("Could not detect any answers in the uploaded file.")
 
         defaults = {
             "total_points": float(item_count) if uploaded_file else float(existing_key.total_points or 0.0),
@@ -3237,9 +3280,8 @@ def upload_answer_key(request):
         )
 
         msg = "Answer Key saved!" if created else "Answer Key updated!"
-        messages.success(request, f"{msg} Assessment: {quiz_name}")
-
-        # URLs for next actions
+        
+        # Next action URLs
         download_url = reverse("download_bubble_sheets_for_answer_key", args=[answer_key.pk])
         review_url = reverse("answer_key_review", args=[answer_key.pk])
 
@@ -3247,18 +3289,15 @@ def upload_answer_key(request):
             return JsonResponse({
                 "ok": True,
                 "message": f"{msg} ({quiz_name})",
-                "answer_key_id": answer_key.pk,
-                "total_items": int(answer_key.total_items or 0),
+                "total_items": item_count,
                 "download_url": download_url,
                 "review_url": review_url,
             })
 
-        # fallback (non-AJAX) behavior
         return redirect("answer_key_review", pk=answer_key.pk)
 
     except Exception as e:
-        if is_ajax:
-            return JsonResponse({"ok": False, "error": str(e)}, status=400)
+        if is_ajax: return JsonResponse({"ok": False, "error": str(e)}, status=400)
         messages.error(request, f"Error: {str(e)}")
         return redirect("user_dashboard")
 
