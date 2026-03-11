@@ -164,5 +164,12 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# --- MEDIA FILES CONFIGURATION ---
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+
+if os.environ.get('DATABASE_URL'):
+    # Para sa Railway Volume mount path
+    MEDIA_ROOT = '/app/media'
+else:
+    # Para sa iyong sariling computer (localhost)
+    MEDIA_ROOT = BASE_DIR / "media"
