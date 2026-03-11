@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path 
+from pathlib import Path
 import dj_database_url
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -88,6 +88,7 @@ WSGI_APPLICATION = 'item.wsgi.application'
 
 
 # Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
@@ -162,11 +163,12 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# --- MEDIA FILES CONFIGURATION ---
 MEDIA_URL = "/media/"
 
 if os.environ.get('DATABASE_URL'):
+    # Para sa Railway Volume mount path
     MEDIA_ROOT = '/app/media'
 else:
+    # Para sa iyong sariling computer (localhost)
     MEDIA_ROOT = BASE_DIR / "media"
-
-MEDIA_URL = "/media/"
