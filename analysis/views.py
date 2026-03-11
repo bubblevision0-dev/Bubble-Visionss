@@ -4052,7 +4052,7 @@ def scan_document(request, pk):
         )
         os.makedirs(base_dir, exist_ok=True)
 
-        raw_name = f"sheet_{uuid.uuid4().hex}.jpg"
+        raw_name = f"s_{uuid.uuid4().hex[:12]}.jpg"
         raw_path = os.path.join(base_dir, raw_name)
         with open(raw_path, "wb+") as dest:
             for chunk in sheet_image.chunks():
