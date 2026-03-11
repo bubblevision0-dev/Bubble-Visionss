@@ -6,12 +6,6 @@ body {
     margin: 0;
     padding: 0;
     font-family: 'Poppins', sans-serif;
-
-    /* Bright school-themed background */
-    /* background: url('../images/school-bg.jpg'); */
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
 }
 
 /* LIGHT BLUE OVERLAY (no gray) */
