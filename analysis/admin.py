@@ -26,6 +26,20 @@ from .models import (
 # INLINES
 # ------------------------------------------------------------
 
+class StudentInline(admin.TabularInline):
+    model = Student
+    extra = 0
+    fields = ("last_name", "full_name", "gender", "section")
+    readonly_fields = ("last_name", "full_name", "gender", "section")
+    can_delete = False # Para viewing lang, iwas bura sa maling pindot
+
+class ScanResultInline(admin.TabularInline):
+    model = ScanResult
+    extra = 0
+    fields = ("student_name", "score", "max_score", "subject", "created_at")
+    readonly_fields = ("student_name", "score", "max_score", "subject", "created_at")
+    can_delete = False
+
 class InstitutionDetailsInline(admin.StackedInline):
     model = InstitutionDetails
     extra = 0
@@ -135,6 +149,7 @@ class SectionAdmin(admin.ModelAdmin):
     list_filter = ("grade__institution", "grade")
     search_fields = ("name", "grade__name", "grade__institution__name")
     autocomplete_fields = ("grade",)
+    inlines = [StudentInline]
 
     def get_institution(self, obj):
         return obj.grade.institution if obj.grade else None
@@ -214,6 +229,7 @@ class AnswerKeyAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ("user", "institution", "grading_period", "grade", "section", "subject")
     readonly_fields = ("uploaded_at", "school_year", "total_points", "total_items")
+    inlines = [ScanResultInline]
 
     def save_model(self, request, obj, form, change):
         # auto-copy school_year from institution (matches your model save)
