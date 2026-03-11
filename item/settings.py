@@ -164,5 +164,19 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+IS_RAILWAY = os.environ.get('DATABASE_URL')
+
+if IS_RAILWAY:
+    # --- PRODUCTION: Use Cloudinary ---
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.environ.get('dmva0fswe'),
+        'API_KEY': os.environ.get('248457574941241'),
+        'API_SECRET': os.environ.get('2lTxCEIUgFFmceEupuRLBkp-gns')
+    }
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+else:
+    # --- LOCAL: Use your computer's hard drive ---
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
