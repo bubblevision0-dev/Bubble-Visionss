@@ -168,7 +168,7 @@ MEDIA_URL = "/media/"
 
 if os.environ.get('DATABASE_URL'):
     MEDIA_ROOT = '/app/media'
-else
+else:
     MEDIA_ROOT = BASE_DIR / "media"
 
 MEDIA_URL = "/media/"
