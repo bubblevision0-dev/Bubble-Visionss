@@ -25,7 +25,7 @@ PDF_TEMPLATES_DIR = BASE_DIR / "item" / "templates_pdf"
 SECRET_KEY = 'django-insecure-yzoy$ls^u(^(_=cw_mrj#^%^r-@d6ssr#&i7folp(==5p8vi*)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = TRUE
+DEBUG = os.environ.get('DATABASE_URL') is None
 
 CSRF_TRUSTED_ORIGINS = [
     "https://bubble-vision-production.up.railway.app",
