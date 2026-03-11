@@ -171,4 +171,8 @@ if os.environ.get('DATABASE_URL'):
     MEDIA_ROOT = '/app/media'
 else:
     # Para sa iyong sariling computer (localhost)
+<<<<<<< HEAD
     MEDIA_ROOT = BASE_DIR / "media"
+=======
+    MEDIA_ROOT = BASE_DIR / "media"
+>>>>>>> 4584abe (Run collectstatic for CSS)
