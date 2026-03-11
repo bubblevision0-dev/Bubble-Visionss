@@ -3262,55 +3262,6 @@ def upload_answer_key(request):
         messages.error(request, f"Error: {str(e)}")
         return redirect("user_dashboard")
 
-def read_answer_key_file(uploaded_file):
-    name = uploaded_file.name.lower()
-    # Read file content into memory for processing
-    content = uploaded_file.read()
-    file_stream = io.BytesIO(content)
-    
-    answers = []
-
-    try:
-        # --- EXCEL (.xlsx, .xls) ---
-        if name.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(file_stream, header=None)
-            # Flatten all cells and take non-empty values
-            answers = df.astype(str).values.flatten().tolist()
-            answers = [a.strip().upper() for a in answers if a.strip() and len(a.strip()) == 1]
-
-        # --- WORD (.docx) ---
-        elif name.endswith('.docx'):
-            doc = Document(file_stream)
-            # Check paragraphs
-            for para in doc.paragraphs:
-                text = para.text.strip()
-                if text:
-                    # Splitting if user put "A, B, C" on one line
-                    parts = text.replace(',', ' ').split()
-                    answers.extend([p.upper() for p in parts if len(p) == 1])
-
-        # --- PDF (.pdf) ---
-        elif name.endswith('.pdf'):
-            reader = PdfReader(file_stream)
-            text = ""
-            for page in reader.pages:
-                text += page.extract_text() or ""
-            # Split by whitespace/newlines and filter for single characters
-            parts = text.replace(',', ' ').split()
-            answers = [p.upper() for p in parts if len(p) == 1 and p.upper() in "ABCDE"]
-
-        # --- CSV/TEXT (.csv, .txt) ---
-        else:
-            file_text = content.decode('utf-8').splitlines()
-            for line in file_text:
-                parts = line.replace(',', ' ').split()
-                answers.extend([p.strip().upper() for p in parts if p.strip()])
-
-    except Exception as e:
-        raise ValueError(f"Could not parse file: {str(e)}")
-
-    return answers
-    
 def _pick_template_pdf(total_items: int) -> Path:
 
     pdf_dir = Path(getattr(settings, "PDF_TEMPLATES_DIR", ""))
