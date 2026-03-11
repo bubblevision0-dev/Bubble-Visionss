@@ -151,24 +151,30 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 
+# --- STATIC FILES ---
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+# Siguraduhin na may folder na 'static' sa root ng project mo
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+# DAGDAGAN MO NITO PARA SA WHITENOISE
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# --- MEDIA FILES CONFIGURATION ---
+# --- MEDIA FILES ---
 MEDIA_URL = "/media/"
-
 if os.environ.get('DATABASE_URL'):
-    # Para sa Railway Volume mount path
+    # Siguraduhin na ito ang nakalagay sa Railway Volume settings mo
     MEDIA_ROOT = '/app/media'
 else:
-    # Para sa iyong sariling computer (localhost)
     MEDIA_ROOT = BASE_DIR / "media"
+
