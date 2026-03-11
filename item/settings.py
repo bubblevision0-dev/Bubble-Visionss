@@ -167,7 +167,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = "/media/"
 
 if os.environ.get('DATABASE_URL'):
-    # Para sa Railway Volume mount path
     MEDIA_ROOT = '/app/media'
 else:
         # Para sa iyong sariling computer (localhost)
