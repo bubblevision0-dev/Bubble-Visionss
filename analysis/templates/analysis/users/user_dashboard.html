@@ -1114,6 +1114,33 @@ function renderClassBoxes() {
   const existingKeys = getExistingKeys();
   if (!container) return;
 
+  // ✅ 1. Inject Responsive Styles (New block for mobile layout support)
+  if (!document.getElementById('responsive-table-styles')) {
+    const style = document.createElement('style');
+    style.id = 'responsive-table-styles';
+    style.innerHTML = `
+      .responsive-scroll-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid #f1f5f9;
+        border-radius: 8px;
+        margin-top: 15px;
+      }
+      .sticky-col {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+      }
+      @media (max-width: 600px) {
+        .class-box { padding: 12px !important; }
+        .class-box-header { flex-direction: column; align-items: flex-start !important; gap: 12px !important; }
+        .header-actions-wrapper { width: 100%; justify-content: space-between; display: flex; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // ✅ remove numbering like "10. ", "10) ", "10- ", "10: "
   function stripNumberPrefix(text) {
     return (text || "")
@@ -1156,7 +1183,7 @@ function renderClassBoxes() {
     const { total: totalStudents, counts: scanCounts } = getQuizScanCounts(quizzes, allStudents);
 
     const headerHtml = `
-      <th style="padding:12px;text-align:left;background:#f8fafc;border-bottom:2px solid #e2e8f0;color:#64748b;position:sticky;left:0;z-index:2;">Student</th>
+      <th class="sticky-col" style="padding:12px;text-align:left;background:#f8fafc;border-bottom:2px solid #e2e8f0;color:#64748b;">Student</th>
       ${quizzes.map(q => `
         <th style="padding:12px;text-align:center;background:#f8fafc;border-bottom:2px solid #e2e8f0;min-width:120px;">
           <div style="margin-top:4px;font-weight:700;">${escapeHtml(q.quizName || "")}</div>
@@ -1215,7 +1242,7 @@ function renderClassBoxes() {
 
         return `
           <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:12px;font-weight:600;background:white;position:sticky;left:0;border-right:1px solid #f1f5f9;">
+            <td class="sticky-col" style="padding:12px;font-weight:600;background:white;border-right:1px solid #f1f5f9;white-space:nowrap;">
               ${escapeHtml(displayName)}
             </td>
 
@@ -1280,24 +1307,26 @@ function renderClassBoxes() {
             </p>
           </div>
 
-          <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;" onclick="event.stopPropagation();">
-            <button type="button"
-              class="btn-icon"
-              title="Open class report"
-              onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
-              <i class="fas fa-chart-column"></i>
-            </button>
+          <div class="header-actions-wrapper" onclick="event.stopPropagation();">
+            <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
+                <button type="button"
+                  class="btn-icon"
+                  title="Open class report"
+                  onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
+                  <i class="fas fa-chart-column"></i>
+                </button>
 
-            <button type="button"
-              onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')"
-              class="gp-btn active">
-              <i class="fas fa-plus"></i> Add Quiz
-            </button>
+                <button type="button"
+                  onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')"
+                  class="gp-btn active">
+                  <i class="fas fa-plus"></i> Add Quiz
+                </button>
+            </div>
           </div>
         </div>
 
         <div class="class-box-body">
-          <div style="overflow-x:auto;border:1px solid #f1f5f9;border-radius:8px;margin-top:15px;">
+          <div class="responsive-scroll-wrapper">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
               <thead><tr>${headerHtml}</tr></thead>
               <tbody>${rowsHtml}</tbody>
@@ -1311,7 +1340,7 @@ function renderClassBoxes() {
   // after render: keep ONLY the selected one open, else all closed
   restoreAccordionState();
 }
-
+  
   function startRescan(keyId, scanId, studentId, studentName, quizName) {
       currentActiveKeyId = keyId;
       document.getElementById('hidden_student_id').value = studentId;
