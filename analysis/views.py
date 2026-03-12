@@ -4885,6 +4885,7 @@ def students_view(request):
 
     allowed_section_ids = list(assigned_qs.values_list("section_id", flat=True).distinct())
 
+    # Add/Edit student
     if request.method == "POST":
         editing_student_id = request.POST.get("student_id") or None
         instance = None
@@ -4896,7 +4897,7 @@ def students_view(request):
                 section_id__in=allowed_section_ids,
             )
 
-        # Teacher can only add students to their own assigned sections
+        # Teacher can only add students to their own sections
         section_id = request.POST.get("section")
         if section_id and int(section_id) not in set(allowed_section_ids):
             messages.error(request, "You are not allowed to add students to that section.")
@@ -4907,38 +4908,24 @@ def students_view(request):
         if form.is_valid():
             obj = form.save(commit=False)
 
-            # --- GENDER LOGIC FIX ---
-            # Capture the gender from the dropdown added to the template
-            gender_val = request.POST.get("gender")
-            if gender_val:
-                # Check if your model uses 'gender' or 'sex' field name
-                if hasattr(obj, "gender"):
-                    obj.gender = gender_val
-                elif hasattr(obj, "sex"):
-                    obj.sex = gender_val
-
-            # Attach institution & school year metadata
-            if hasattr(obj, "institution"):
+            # attach institution & school year if your model has them
+            if hasattr(obj, "institution_id"):
                 obj.institution = institution
             if hasattr(obj, "school_year") and academic_year:
                 obj.school_year = academic_year
-            
-            # Ensure the grade is set based on the chosen section
-            if hasattr(obj, "grade") and obj.section:
-                obj.grade = obj.section.grade
 
             obj.save()
             messages.success(request, "Student saved successfully.")
+
+            # redirect back to dashboard
             return redirect("user_dashboard")
 
-        # If form is invalid, show errors
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
-        
+        messages.error(request, "Please fix the errors in the form.")
         return redirect("user_dashboard")
 
+    # GET request should NOT show separate page
     return redirect("user_dashboard")
+
 # helper regex
 RE_NUMBERED = re.compile(r"^\s*(\d+)\s*[\.\)\-:]\s*(.+)$")  # 1. Name / 1) Name / 1- Name / 1: Name
 RE_ANY_NUMBER_IN_LINE = re.compile(r"(\d+\s*[\.\)\-:]\s*)")  # used to strip anything before first number
@@ -5466,39 +5453,6 @@ def download_bubble_sheets_selected(request, section_id: int):
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
-
-@login_required
-@require_POST
-def delete_all_students_section(request, section_id):
-    teacher = Teacher.objects.filter(user=request.user).first()
-    institution = get_current_institution(request) or getattr(teacher, "institution", None)
-    
-    if not institution or not teacher:
-        return redirect("user_dashboard")
-
-    academic_year = getattr(institution, "school_year", None)
-    
-    # Security: Verify the teacher is assigned to this section before deleting
-    is_assigned = TeacherClassAssignment.objects.filter(
-        teacher=teacher,
-        institution=institution,
-        section_id=section_id,
-        school_year=academic_year
-    ).exists()
-
-    if not is_assigned:
-        messages.error(request, "Unauthorized action.")
-        return redirect("user_dashboard")
-
-    # Perform deletion
-    deleted_count, _ = Student.objects.filter(
-        section_id=section_id, 
-        institution=institution,
-        school_year=academic_year
-    ).delete()
-
-    messages.success(request, f"Successfully deleted all {deleted_count} students from this section.")
-    return redirect("user_dashboard")
 
 # if num_items <= 10: template_file = "1-10 items.pdf"
 #     elif num_items <= 15: template_file = "1-15items.pdf"
