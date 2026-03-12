@@ -1357,60 +1357,6 @@ function renderClassBoxes() {
 
   restoreAccordionState();
 }
-
-    const rowsHtml =
-      renderGroup("Male", maleStudents) +
-      renderGroup("Female", femaleStudents) +
-      renderGroup("Uncategorized", unknownStudents);
-
-    return `
-      <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-        <div class="class-box-header"
-             onclick="toggleClassBox('${boxId}')"
-             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:10px;">
-
-          <div style="min-width:0;">
-            <h3 style="margin:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              Grade ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
-            </h3>
-            <p style="margin:0;color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${escapeHtml(a.subject_name)}
-            </p>
-          </div>
-
-          <div class="header-actions-wrapper" onclick="event.stopPropagation();">
-            <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
-                <button type="button"
-                  class="btn-icon"
-                  title="Open class report"
-                  onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
-                  <i class="fas fa-chart-column"></i>
-                </button>
-
-                <button type="button"
-                  onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')"
-                  class="gp-btn active">
-                  <i class="fas fa-plus"></i> Add Quiz
-                </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="class-box-body">
-          <div class="responsive-scroll-wrapper">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
-              <thead><tr>${headerHtml}</tr></thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // after render: keep ONLY the selected one open, else all closed
-  restoreAccordionState();
-}
   
   function startRescan(keyId, scanId, studentId, studentName, quizName) {
       currentActiveKeyId = keyId;
