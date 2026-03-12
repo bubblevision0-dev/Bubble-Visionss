@@ -1109,84 +1109,73 @@ function safeScoreText(v){
     return aMi.localeCompare(bMi);
   }
 
-
- function renderClassBoxes() {
+function renderClassBoxes() {
   const container = document.getElementById('classBoxesContainer');
   const existingKeys = getExistingKeys();
   if (!container) return;
 
-  // --- MOBILE RESPONSIVENESS INJECTION ---
+  // --- MOBILE RESPONSIVENESS INJECTION (Sticky Column Version) ---
   if (!document.getElementById('mobile-table-styles')) {
     const style = document.createElement('style');
     style.id = 'mobile-table-styles';
     style.innerHTML = `
+      /* Container to allow horizontal scrolling */
+      .scroll-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+        border: 1px solid #f1f5f9;
+        border-radius: 8px;
+        margin-top: 15px;
+        position: relative;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Make the first column (Student Name) sticky */
+      .sticky-name {
+        position: -webkit-sticky;
+        position: sticky !important;
+        left: 0;
+        z-index: 10;
+        background: white;
+        min-width: 140px;
+        max-width: 140px;
+        border-right: 2px solid #e2e8f0 !important;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+      }
+
+      /* Header styling for sticky name */
+      th.sticky-name {
+        z-index: 20;
+        background: #f8fafc !important;
+      }
+
+      /* Group header (Gender) should span across and not be sticky */
+      .group-header-row td {
+        position: sticky;
+        left: 0;
+        z-index: 15;
+        width: 100%;
+      }
+
       @media (max-width: 768px) {
-        /* Stack the header flex items */
-        .class-box-header { flex-direction: column; align-items: flex-start !important; gap: 15px !important; }
-        .class-box-header div:last-child { width: 100%; justify-content: flex-start !important; }
+        .class-box { padding: 12px !important; }
+        .class-box-header h3 { font-size: 14px; }
         
-        /* Force table to stack */
-        .class-box-body table, 
-        .class-box-body thead, 
-        .class-box-body tbody, 
-        .class-box-body th, 
-        .class-box-body td, 
-        .class-box-body tr { display: block; }
+        /* Adjust quiz column width for mobile so it's not too wide */
+        .quiz-col { min-width: 100px !important; padding: 8px !important; }
         
-        /* Hide the main table header */
-        .class-box-body thead tr { display: none; }
-        
-        /* Style each student row as a card */
-        .class-box-body tr { 
-          margin-bottom: 15px; 
-          border: 1px solid #e2e8f0; 
-          border-radius: 8px; 
-          background: #fff; 
-          overflow: hidden;
-        }
-        
-        /* Student name becomes a sub-header */
-        .class-box-body td:first-child { 
-          background: #f8fafc !important; 
-          position: static !important; 
-          border-right: none !important; 
-          border-bottom: 1px solid #e2e8f0 !important;
-          font-size: 14px;
-        }
-        
-        /* Quiz cells become horizontal label-value pairs */
-        .quiz-cell {
-          display: flex !important;
-          justify-content: space-between;
-          align-items: center;
-          text-align: left !important;
-          padding: 10px 12px !important;
-          border-bottom: 1px dashed #f1f5f9;
-        }
-        .quiz-cell::before {
-          content: attr(data-label);
-          font-weight: 700;
-          color: #64748b;
-          font-size: 11px;
-          flex: 1;
-        }
-        .quiz-cell > div { flex: 0; }
+        /* Hide "Add Quiz" text to save header space, keep icon */
+        .gp-btn span { display: none; }
+        .gp-btn::after { content: " Quiz"; }
       }
     `;
     document.head.appendChild(style);
   }
-  // ---------------------------------------
 
-  // ✅ remove numbering like "10. ", "10) ", "10- ", "10: "
   function stripNumberPrefix(text) {
-    return (text || "")
-      .toString()
-      .trim()
-      .replace(/^\s*\d+\s*[\.\)\-:]\s*/g, "")
-      .trim();
+    return (text || "").toString().trim().replace(/^\s*\d+\s*[\.\)\-:]\s*/g, "").trim();
   }
 
-  // ✅ normalize gender coming from backend
   function getGenderValue(s) {
     const g = (s.gender || s.sex || "").toString().trim().toLowerCase();
     if (g.startsWith("m")) return "Male";
@@ -1194,11 +1183,8 @@ function safeScoreText(v){
     return "Unknown";
   }
 
-  // ✅ build display name (and remove any leading numbers)
   function getDisplayName(s) {
-    const raw = s.last_name
-      ? `${s.last_name}, ${s.full_name || ""}`
-      : (s.full_name || "");
+    const raw = s.last_name ? `${s.last_name}, ${s.full_name || ""}` : (s.full_name || "");
     return stripNumberPrefix(raw);
   }
 
@@ -1206,52 +1192,24 @@ function safeScoreText(v){
     const compositeKey = `${a.grade_id}-${a.section_id}-${a.subject_id}`;
     const boxId = `box-${compositeKey}`;
     const quizzes = existingKeys[compositeKey] || [];
-
-    // ✅ all students sorted
     const allStudents = (a.students || []).slice().sort(compareStudents);
 
-    // ✅ grouped lists
     const maleStudents = allStudents.filter(s => getGenderValue(s) === "Male");
     const femaleStudents = allStudents.filter(s => getGenderValue(s) === "Female");
     const unknownStudents = allStudents.filter(s => getGenderValue(s) === "Unknown");
 
-    // ✅ counts must use allStudents (NOT undefined "students")
     const { total: totalStudents, counts: scanCounts } = getQuizScanCounts(quizzes, allStudents);
 
     const headerHtml = `
-      <th style="padding:12px;text-align:left;background:#f8fafc;border-bottom:2px solid #e2e8f0;color:#64748b;position:sticky;left:0;z-index:2;">Student</th>
+      <th class="sticky-name" style="padding:12px;text-align:left;background:#f8fafc;border-bottom:2px solid #e2e8f0;color:#64748b;">Student</th>
       ${quizzes.map(q => `
-        <th style="padding:12px;text-align:center;background:#f8fafc;border-bottom:2px solid #e2e8f0;min-width:120px;">
-          <div style="margin-top:4px;font-weight:700;">${escapeHtml(q.quizName || "")}</div>
-          <div style="margin-top:4px;font-size:11px;font-weight:800;color:#64748b;">
-            Scanned: ${scanCounts[String(q.id)] || 0} / ${totalStudents}
-          </div>
-          <div style="margin-top:2px;font-size:11px;font-weight:900;color:#0f172a;">
-            Items: ${q.totalItems || 0}
-          </div>
-
+        <th class="quiz-col" style="padding:12px;text-align:center;background:#f8fafc;border-bottom:2px solid #e2e8f0;min-width:120px;">
+          <div style="font-weight:700;">${escapeHtml(q.quizName || "")}</div>
+          <div style="font-size:10px;color:#64748b;">${scanCounts[String(q.id)] || 0}/${totalStudents}</div>
+          
           <div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">
-            <button type="button"
-              onclick="window.location.href='${q.url}'"
-              class="btn-icon"
-              title="View Key">
-              <i class="fas fa-eye"></i>
-            </button>
-
-            <button type="button"
-              onclick="editAssessment(
-                '${q.id}',
-                '${escapeJsString(q.quizName || "")}',
-                '${q.gradeId}',
-                '${q.sectionId}',
-                '${q.subjectId}',
-                '${escapeJsString(q.fileName || "")}',
-                '${boxId}'
-              )"
-              class="btn-icon"
-              title="Edit">
-              <i class="fas fa-edit"></i>
-            </button>
+            <button type="button" onclick="window.location.href='${q.url}'" class="btn-icon"><i class="fas fa-eye"></i></button>
+            <button type="button" onclick="editAssessment('${q.id}','${escapeJsString(q.quizName)}','${q.gradeId}','${q.sectionId}','${q.subjectId}','${escapeJsString(q.fileName)}','${boxId}')" class="btn-icon"><i class="fas fa-edit"></i></button>
           </div>
         </th>
       `).join('')}
@@ -1259,15 +1217,12 @@ function safeScoreText(v){
 
     function renderGroup(label, list) {
       if (!list.length) return "";
-
       const colspan = 1 + quizzes.length;
 
       const groupHeader = `
-        <tr>
+        <tr class="group-header-row">
           <td colspan="${colspan}"
-              style="padding:10px 12px;background:#f1f5f9;color:#0f172a;
-                     font-weight:900;letter-spacing:.5px;text-transform:uppercase;
-                     border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+              style="padding:10px 12px;background:#f1f5f9;color:#0f172a;font-weight:900;font-size:11px;text-transform:uppercase;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
             ${label} (${list.length})
           </td>
         </tr>
@@ -1275,40 +1230,25 @@ function safeScoreText(v){
 
       const groupRows = list.map(s => {
         const displayName = getDisplayName(s);
-
         return `
           <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:12px;font-weight:600;background:white;position:sticky;left:0;border-right:1px solid #f1f5f9;">
+            <td class="sticky-name" style="padding:12px;font-weight:600;background:white;">
               ${escapeHtml(displayName)}
             </td>
-
             ${quizzes.map(q => {
               const scanObj = (s.scans && s.scans[String(q.id)]) ? s.scans[String(q.id)] : null;
               const scoreText = safeScoreText(scanObj ? scanObj.score : null);
               const scanId = scanObj ? scanObj.scan_id : null;
 
               return `
-                <td class="quiz-cell" data-label="${escapeHtml(q.quizName || 'Quiz')}" style="padding:12px;text-align:center;">
+                <td class="quiz-col" style="padding:12px;text-align:center;">
                   <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
                     ${hasValue(scoreText) && hasValue(scanId) ? `
-                      <button type="button"
-                        onclick="openScanViewer('${scanId}')"
-                        title="View scan result"
-                        style="cursor:pointer;background:#eff6ff;color:#1d4ed8;border:1px solid #3b82f6;border-radius:6px;font-weight:800;padding:4px 10px;font-size:13px;">
+                      <button type="button" onclick="openScanViewer('${scanId}')" style="cursor:pointer;background:#eff6ff;color:#1d4ed8;border:1px solid #3b82f6;border-radius:6px;font-weight:800;padding:4px 8px;font-size:12px;">
                         ${escapeHtml(scoreText)}
                       </button>
-
-                      <button type="button"
-                        onclick="startRescan('${q.id}', '${scanId}', '${s.id}', \`${escapeJsString(s.full_name || "")}\`, \`${escapeJsString(q.quizName || "")}\`) "
-                        class="scan-btn scanned"
-                        title="Click to rescan">
-                        <i class="fas fa-check"></i>
-                      </button>
                     ` : `
-                      <button type="button"
-                        onclick="openQuickScan('${q.id}', '${s.id}', \`${escapeJsString(s.full_name || "")}\`, \`${escapeJsString(q.quizName || "")}\`) "
-                        class="scan-btn"
-                        title="Start scan">
+                      <button type="button" onclick="openQuickScan('${q.id}', '${s.id}', \`${escapeJsString(s.full_name)}\`, \`${escapeJsString(q.quizName)}\`) " class="scan-btn">
                         <i class="fas fa-camera"></i>
                       </button>
                     `}
@@ -1323,45 +1263,30 @@ function safeScoreText(v){
       return groupHeader + groupRows;
     }
 
-    const rowsHtml =
-      renderGroup("Male", maleStudents) +
-      renderGroup("Female", femaleStudents) +
-      renderGroup("Uncategorized", unknownStudents);
+    const rowsHtml = renderGroup("Male", maleStudents) + renderGroup("Female", femaleStudents) + renderGroup("Uncategorized", unknownStudents);
 
     return `
       <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">
-        <div class="class-box-header"
-             onclick="toggleClassBox('${boxId}')"
-             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:10px;cursor:pointer;">
-
+        <div class="class-box-header" onclick="toggleClassBox('${boxId}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;">
           <div style="min-width:0;">
             <h3 style="margin:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               Grade ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
             </h3>
-            <p style="margin:0;color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${escapeHtml(a.subject_name)}
-            </p>
+            <p style="margin:0;color:#64748b;font-size:12px;">${escapeHtml(a.subject_name)}</p>
           </div>
-
-          <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;" onclick="event.stopPropagation();">
-            <button type="button"
-              class="btn-icon"
-              title="Open class report"
-              onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
+          <div style="display:flex;gap:8px;align-items:center;" onclick="event.stopPropagation();">
+            <button type="button" class="btn-icon" onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
               <i class="fas fa-chart-column"></i>
             </button>
-
-            <button type="button"
-              onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')"
-              class="gp-btn active">
-              <i class="fas fa-plus"></i> Add Quiz
+            <button type="button" onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')" class="gp-btn active">
+              <i class="fas fa-plus"></i> <span>Add</span>
             </button>
           </div>
         </div>
 
         <div class="class-box-body">
-          <div style="overflow-x:auto;border:1px solid #f1f5f9;border-radius:8px;margin-top:15px;">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <div class="scroll-container">
+            <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:12px;">
               <thead><tr>${headerHtml}</tr></thead>
               <tbody>${rowsHtml}</tbody>
             </table>
