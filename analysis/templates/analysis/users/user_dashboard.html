@@ -1318,7 +1318,7 @@ function renderClassBoxes() {
 
           <div style="min-width:0; flex: 1;">
             <h3 style="margin:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              Grade ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
+              ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
             </h3>
             <p style="margin:0;color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               ${escapeHtml(a.subject_name)}
@@ -1327,6 +1327,10 @@ function renderClassBoxes() {
 
           <div class="header-actions-wrapper" onclick="event.stopPropagation();">
             <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
+              <input type="text" 
+                  placeholder="Search student..." 
+                  class="search-input"
+                  onkeyup="filterStudents(this, '${boxId}')">
                 <button type="button"
                   class="btn-icon"
                   title="Open class report"
@@ -1356,6 +1360,24 @@ function renderClassBoxes() {
   }).join('');
 
   restoreAccordionState();
+}
+
+function filterStudents(input, boxId) {
+  const filter = input.value.toUpperCase();
+  const table = document.querySelector(`#${boxId} table`);
+  const tr = table.getElementsByTagName("tr");
+
+  for (let i = 0; i < tr.length; i++) {
+    // Skip the main header and group headers
+    if (tr[i].getElementsByTagName("th").length > 0 || tr[i].innerText.includes("MALE (") || tr[i].innerText.includes("FEMALE (") || tr[i].innerText.includes("UNCATEGORIZED (")) {
+      continue;
+    }
+    const td = tr[i].getElementsByTagName("td")[0];
+    if (td) {
+      const txtValue = td.textContent || td.innerText;
+      tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+    }
+  }
 }
   
   function startRescan(keyId, scanId, studentId, studentName, quizName) {
