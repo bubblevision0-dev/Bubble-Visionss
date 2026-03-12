@@ -5,7 +5,9 @@
 {% block title %}Teacher Dashboard | Item Analysis{% endblock %}
 
 {% block content %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="{% static 'css/user_dashboard.css' %}">
+
 
 <style>
   /* =========================
@@ -45,8 +47,19 @@
   #scanCaptureSection { display: none; background: #f8fafc; padding: 2rem; border-radius: 18px; border: 1px solid #e2e8f0; margin-top: 24px; animation: slideUp 0.4s ease-out; }
   @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-  .assigned-classes-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .assigned-classes-row {
+    display: grid;
+    /* This is the "magic" line for responsiveness */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 1.5rem;
+    width: 100%;
+  }
 
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto; /* Adds a scrollbar ONLY to the table */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling for iPhone */
+  }
   .class-box {
       background: #ffffff; border: 1px solid #e2e8f0; padding: 18px; border-radius: 16px;
       transition: all 0.2s ease; border-left: 5px solid #0f172a; position: relative;
