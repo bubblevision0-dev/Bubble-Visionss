@@ -1110,10 +1110,72 @@ function safeScoreText(v){
   }
 
 
-  function renderClassBoxes() {
+ function renderClassBoxes() {
   const container = document.getElementById('classBoxesContainer');
   const existingKeys = getExistingKeys();
   if (!container) return;
+
+  // --- MOBILE RESPONSIVENESS INJECTION ---
+  if (!document.getElementById('mobile-table-styles')) {
+    const style = document.createElement('style');
+    style.id = 'mobile-table-styles';
+    style.innerHTML = `
+      @media (max-width: 768px) {
+        /* Stack the header flex items */
+        .class-box-header { flex-direction: column; align-items: flex-start !important; gap: 15px !important; }
+        .class-box-header div:last-child { width: 100%; justify-content: flex-start !important; }
+        
+        /* Force table to stack */
+        .class-box-body table, 
+        .class-box-body thead, 
+        .class-box-body tbody, 
+        .class-box-body th, 
+        .class-box-body td, 
+        .class-box-body tr { display: block; }
+        
+        /* Hide the main table header */
+        .class-box-body thead tr { display: none; }
+        
+        /* Style each student row as a card */
+        .class-box-body tr { 
+          margin-bottom: 15px; 
+          border: 1px solid #e2e8f0; 
+          border-radius: 8px; 
+          background: #fff; 
+          overflow: hidden;
+        }
+        
+        /* Student name becomes a sub-header */
+        .class-box-body td:first-child { 
+          background: #f8fafc !important; 
+          position: static !important; 
+          border-right: none !important; 
+          border-bottom: 1px solid #e2e8f0 !important;
+          font-size: 14px;
+        }
+        
+        /* Quiz cells become horizontal label-value pairs */
+        .quiz-cell {
+          display: flex !important;
+          justify-content: space-between;
+          align-items: center;
+          text-align: left !important;
+          padding: 10px 12px !important;
+          border-bottom: 1px dashed #f1f5f9;
+        }
+        .quiz-cell::before {
+          content: attr(data-label);
+          font-weight: 700;
+          color: #64748b;
+          font-size: 11px;
+          flex: 1;
+        }
+        .quiz-cell > div { flex: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  // ---------------------------------------
 
   // ✅ remove numbering like "10. ", "10) ", "10- ", "10: "
   function stripNumberPrefix(text) {
@@ -1226,7 +1288,7 @@ function safeScoreText(v){
               const scanId = scanObj ? scanObj.scan_id : null;
 
               return `
-                <td style="padding:12px;text-align:center;">
+                <td class="quiz-cell" data-label="${escapeHtml(q.quizName || 'Quiz')}" style="padding:12px;text-align:center;">
                   <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
                     ${hasValue(scoreText) && hasValue(scanId) ? `
                       <button type="button"
@@ -1267,10 +1329,10 @@ function safeScoreText(v){
       renderGroup("Uncategorized", unknownStudents);
 
     return `
-      <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
+      <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">
         <div class="class-box-header"
              onclick="toggleClassBox('${boxId}')"
-             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:10px;">
+             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:10px;cursor:pointer;">
 
           <div style="min-width:0;">
             <h3 style="margin:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -1309,7 +1371,6 @@ function safeScoreText(v){
     `;
   }).join('');
 
-  // after render: keep ONLY the selected one open, else all closed
   restoreAccordionState();
 }
 
