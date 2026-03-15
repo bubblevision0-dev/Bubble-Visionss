@@ -292,6 +292,22 @@
     width: 100% !important;
   }
 
+  .class-box .header-search-container {
+    display: none !important;
+}
+
+/* Show search container ONLY when the box is open */
+.class-box.is-open .header-search-container {
+    display: block !important;
+}
+
+/* Responsive adjustment for the header text to prevent the "G..." clipping */
+.class-box-header div h3 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 </style>
 
 <div class="page-header">
@@ -1311,35 +1327,39 @@ function renderClassBoxes() {
       renderGroup("Uncategorized", unknownStudents);
 
     return `
-      <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px; overflow: hidden;">
-        <div class="class-box-header"
-             onclick="toggleClassBox('${boxId}')"
-             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:10px;">
-
+      <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:15px; margin-bottom:15px; overflow: hidden;">
+         
+        <div class="class-box-header" 
+            onclick="toggleClassBox('${boxId}')" 
+            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          
           <div style="min-width:0; flex: 1;">
-            <h3 style="margin:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              Grade ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
+            <h3 style="margin:0; font-size:16px; font-weight:800; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
             </h3>
-            <p style="margin:0;color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <p style="margin:0; color:#64748b; font-size:18px;">
               ${escapeHtml(a.subject_name)}
             </p>
           </div>
 
-          <div class="header-actions-wrapper" onclick="event.stopPropagation();">
-            <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
-                <button type="button"
-                  class="btn-icon"
-                  title="Open class report"
-                  onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
-                  <i class="fas fa-chart-column"></i>
-                </button>
-
-                <button type="button"
-                  onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')"
-                  class="gp-btn active">
-                  <i class="fas fa-plus"></i> Add Quiz
-                </button>
+          <div class="header-actions-wrapper" onclick="event.stopPropagation();" style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+        
+            <div class="header-search-container" style="position: relative;">
+                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 11px;"></i>
+                <input type="text" 
+                      class="class-search-input" 
+                      placeholder="Search student..." 
+                      onkeyup="filterTableRealtime(this, '${boxId}')"
+                      style="padding: 6px 10px 6px 28px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; width: 140px;">
             </div>
+
+            <button type="button" class="btn-icon" title="Open class report" onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
+                <i class="fas fa-chart-column"></i>
+            </button>
+
+            <button type="button" onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')" class="gp-btn active">
+                <i class="fas fa-plus"></i> Add Quiz
+            </button>
           </div>
         </div>
 
@@ -2593,6 +2613,57 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
+function filterTableRealtime(input, boxId) {
+    const filter = input.value.toLowerCase();
+    const box = document.getElementById(boxId);
+    const tableRows = box.querySelectorAll("tbody tr");
+
+    tableRows.forEach(row => {
+        if (row.querySelector('td[colspan]')) {
+            return; 
+        }
+
+        const studentNameCell = row.querySelector(".sticky-col");
+        if (studentNameCell) {
+            const textValue = studentNameCell.textContent || studentNameCell.innerText;
+            if (textValue.toLowerCase().indexOf(filter) > -1) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        }
+    });
+
+    hideEmptyGenderHeaders(box);
+}
+
+function hideEmptyGenderHeaders(box) {
+    const rows = Array.from(box.querySelectorAll("tbody tr"));
+    let currentHeader = null;
+    let hasVisibleStudents = false;
+
+    rows.forEach((row, index) => {
+        const isHeader = row.querySelector('td[colspan]');
+        
+        if (isHeader) {
+            if (currentHeader && !hasVisibleStudents) {
+                currentHeader.style.display = "none";
+            }
+            currentHeader = row;
+            currentHeader.style.display = ""; 
+            hasVisibleStudents = false;
+        } else {
+            if (row.style.display !== "none") {
+                hasVisibleStudents = true;
+            }
+        }
+
+        if (index === rows.length - 1 && currentHeader && !hasVisibleStudents) {
+            currentHeader.style.display = "none";
+        }
+    });
+}
 </script>
 
 {% endblock %}
