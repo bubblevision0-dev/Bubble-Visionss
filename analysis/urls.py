@@ -198,5 +198,6 @@ urlpatterns = [
 
     path("add-grading-period/", views.add_grading_period, name="add_grading_period"),
     path("delete-grading-period/", views.delete_grading_period, name="delete_grading_period"),
+    path('students/delete-all/<int:section_id>/', views.delete_all_students_section, name='delete_all_students_section'),
 ]
 

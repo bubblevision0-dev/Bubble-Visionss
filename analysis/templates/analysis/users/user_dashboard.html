@@ -279,7 +279,19 @@
     grid-column: 1 / -1 !important;
     width: 100% !important;
   }
+.class-box .header-search-container {
+    display: none !important;
+}
 
+.class-box.is-open .header-search-container {
+    display: block !important;
+}
+
+.class-box-header div h3 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
   
 
 </style>
@@ -437,6 +449,14 @@
                      value="{{ form.last_name.value|default_if_none:'' }}"
                      placeholder="e.g. Santos">
             </div>
+            <div class="form-group">
+        <label for="id_gender">Gender:</label>
+        <select name="gender" id="id_gender" class="form-control" required>
+            <option value="">Select Gender</option>
+            <option value="Male" {% if form.gender.value == "Male" %}selected{% endif %}>Male</option>
+            <option value="Female" {% if form.gender.value == "Female" %}selected{% endif %}>Female</option>
+        </select>
+    </div>
           </div>
 
           <div class="form-actions">
@@ -574,13 +594,18 @@
                   {% endfor %}
                 </ul>
 
-                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;">
-                  <a href="{% url 'download_bubble_sheets_section' sg.grouper.id %}"
-                     class="btn-link"
-                     style="text-decoration:none;font-weight:700;">
-                    <i class="fas fa-download"></i> Bubble Sheets
-                  </a>
-                </div>
+                </ul> <div class="modal-footer-actions">
+    <form action="{% url 'delete_all_students_section' sg.grouper.id %}" method="post" onsubmit="return confirm('WARNING: Delete ALL students in this section?');">
+        {% csrf_token %}
+        <button type="submit" class="btn-delete-all" style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 8px 16px; border-radius: 999px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            <i class="fas fa-trash-alt"></i> Delete All Students
+        </button>
+    </form>
+    
+    {% comment %} <a href="{% url 'download_bubble_sheets_section' sg.grouper.id %}" class="btn-link" style="font-weight: 700;">
+        <i class="fas fa-download"></i> Bubble Sheets
+    </a> {% endcomment %}
+</div>
               </div>
             {% endfor %}
           {% endfor %}
@@ -1248,38 +1273,43 @@ function safeScoreText(v){
       renderGroup("Uncategorized", unknownStudents);
 
     return `
-      <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-        <div class="class-box-header"
-             onclick="toggleClassBox('${boxId}')"
-             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;gap:10px;">
-
-          <div style="min-width:0;">
-            <h3 style="margin:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              Grade ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
+      <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:15px; margin-bottom:15px; overflow: hidden;">
+        
+        <div class="class-box-header" 
+            onclick="toggleClassBox('${boxId}')" 
+            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          
+          <div style="min-width:0; flex: 1;">
+            <h3 style="margin:0; font-size:16px; font-weight:800; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${escapeHtml(a.grade_name)} - ${escapeHtml(a.section_name)}
             </h3>
-            <p style="margin:0;color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <p style="margin:0; color:#64748b; font-size:18px;">
               ${escapeHtml(a.subject_name)}
             </p>
           </div>
 
-          <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;" onclick="event.stopPropagation();">
-            <button type="button"
-              class="btn-icon"
-              title="Open class report"
-              onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
-              <i class="fas fa-chart-column"></i>
+          <div class="header-actions-wrapper" onclick="event.stopPropagation();" style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+        
+            <div class="header-search-container" style="position: relative;">
+                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 11px;"></i>
+                <input type="text" 
+                      class="class-search-input" 
+                      placeholder="Search student..." 
+                      onkeyup="filterTableRealtime(this, '${boxId}')"
+                      style="padding: 6px 10px 6px 28px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; width: 140px;">
+            </div>
+
+            <button type="button" class="btn-icon" title="Open class report" onclick="openMatrixReport('${a.grade_id}','${a.section_id}','${a.subject_id}')">
+                <i class="fas fa-chart-column"></i>
             </button>
 
-            <button type="button"
-              onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')"
-              class="gp-btn active">
-              <i class="fas fa-plus"></i> Add Quiz
+            <button type="button" onclick="preFillModal('${a.grade_id}', '${a.section_id}', '${a.subject_id}', '${boxId}')" class="gp-btn active">
+                <i class="fas fa-plus"></i> Add Quiz
             </button>
           </div>
         </div>
-
-        <div class="class-box-body">
-          <div style="overflow-x:auto;border:1px solid #f1f5f9;border-radius:8px;margin-top:15px;">
+        <div class="class-box-body" style="width: 100%;">
+          <div class="responsive-scroll-wrapper">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
               <thead><tr>${headerHtml}</tr></thead>
               <tbody>${rowsHtml}</tbody>
@@ -1566,7 +1596,9 @@ function safeScoreText(v){
       if (lastNameInput)   lastNameInput.value   = data.lastName || '';
 
       if (studentIdField) studentIdField.value = data.id || '';
-
+      if (document.getElementById('id_gender')) {
+        document.getElementById('id_gender').value = data.gender || '';
+    }
       if (studentSubmitBtn) studentSubmitBtn.textContent = 'Save changes';
       if (editHint) editHint.style.display = 'inline';
     }
@@ -1592,11 +1624,13 @@ function safeScoreText(v){
           gradeId: this.dataset.gradeId,
           sectionId: this.dataset.sectionId,
           lastName: this.dataset.lastName || '',
-          middleInitial: this.dataset.middleInitial || ''
+          middleInitial: this.dataset.middleInitial || '',
+          gender: this.dataset.gender || ''
         };
         startEditStudent(data);
         if (studentsModal) studentsModal.classList.remove('is-open');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (document.getElementById('id_gender')) document.getElementById('id_gender').value = this.dataset.gender || "";
       });
     });
 
@@ -2445,7 +2479,62 @@ function exportTallyPerItemExcel(){
 
   downloadTextFile(csv, `${subtitle}.csv`, "text/csv;charset=utf-8;");
 }
+function filterTableRealtime(input, boxId) {
+    const filter = input.value.toLowerCase();
+    const box = document.getElementById(boxId);
+    // Target only the body rows
+    const tableRows = box.querySelectorAll("tbody tr");
 
+    tableRows.forEach(row => {
+        // Skip gender group headers (Male/Female/Uncategorized)
+        if (row.querySelector('td[colspan]')) {
+            return; 
+        }
+
+        // Target the first cell (which contains the student name)
+        const studentNameCell = row.cells[0]; 
+        if (studentNameCell) {
+            const textValue = studentNameCell.textContent || studentNameCell.innerText;
+            if (textValue.toLowerCase().indexOf(filter) > -1) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        }
+    });
+
+    // Clean up empty gender headers
+    hideEmptyGenderHeaders(box);
+}
+
+function hideEmptyGenderHeaders(box) {
+    const rows = Array.from(box.querySelectorAll("tbody tr"));
+    let lastHeader = null;
+    let hasVisibleContent = false;
+
+    rows.forEach((row) => {
+        const isHeader = row.querySelector('td[colspan]');
+        
+        if (isHeader) {
+            // Before moving to a new header, hide the previous one if it was empty
+            if (lastHeader && !hasVisibleContent) {
+                lastHeader.style.display = "none";
+            }
+            lastHeader = row;
+            lastHeader.style.display = ""; // Reset to visible
+            hasVisibleContent = false;
+        } else {
+            if (row.style.display !== "none") {
+                hasVisibleContent = true;
+            }
+        }
+    });
+
+    // Check the very last group
+    if (lastHeader && !hasVisibleContent) {
+        lastHeader.style.display = "none";
+    }
+}
 </script>
 
 <script>
@@ -2525,6 +2614,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
 </script>
 
 {% endblock %}
