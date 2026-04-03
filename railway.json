@@ -4,7 +4,7 @@
     "builder": "RAILPACK"
   },
   "deploy": {
-    "startCommand": "python manage.py createsuperuser --noinput; python manage.py migrate && gunicorn item.wsgi",
+    "startCommand": "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn item.wsgi",
  
   }
 }
