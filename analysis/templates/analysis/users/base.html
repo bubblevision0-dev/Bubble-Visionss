@@ -11,76 +11,291 @@
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/user_management.css' %}">
+
   {# add user-specific css if you have it, e.g.: #}
   {# <link rel="stylesheet" href="{% static 'css/user_dashboard.css' %}"> #}
 </head>
 
+<style>
+/* --- Desktop & Base Styles --- */
+.nav-link i {
+    margin-right: 8px;
+    width: 20px;
+    text-align: center;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 3000; /* High z-index to stay above everything */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: var(--card-bg, #ffffff);
+    color: var(--text-color, #333);
+    margin: 50px auto;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease-out;
+    overflow: hidden; /* Keeps header/footer rounded */
+}
+
+/* Dark Mode Support for Modal */
+[data-theme="dark"] .modal-content {
+    background-color: #1e1e1e;
+    color: #efefef;
+    border: 1px solid #444;
+}
+[data-theme="dark"] .modal-header, 
+[data-theme="dark"] .modal-footer {
+    border-color: #333;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body { 
+    padding: 1.5rem; 
+    line-height: 1.6; 
+    max-height: 70vh; /* Prevents modal from being taller than screen */
+    overflow-y: auto; 
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #eee;
+    text-align: right;
+}
+
+/* --- MOBILE RESPONSIVE ADJUSTMENTS --- */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 20px auto; /* Less top margin on mobile */
+        width: 95%;
+    }
+    
+    .brand-text {
+        display: none; /* Hide 'Teacher Portal' text on very small screens if needed */
+    }
+    
+    .profile-meta {
+        display: none; /* Hide name/role on mobile to save space */
+    }
+
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Modal Tab Navbar */
+.modal-tabs {
+    display: flex;
+    background: var(--nav-bg, #f8f9fa);
+    border-bottom: 1px solid #eee;
+}
+
+[data-theme="dark"] .modal-tabs {
+    background: #252525;
+    border-color: #333;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #666;
+    transition: 0.3s;
+    border-bottom: 2px solid transparent;
+}
+
+[data-theme="dark"] .tab-btn { color: #aaa; }
+
+.tab-btn.active {
+    color: #2563eb; /* Primary Color */
+    border-bottom-color: #2563eb;
+    font-weight: bold;
+}
+
+/* Tab Content Logic */
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.badge {
+    background: #2563eb;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+/* Workflow Steps for Tab 2 */
+.workflow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.step {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.step-num {
+    background: #2563eb;
+    color: white;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+[data-theme="dark"] .step-num {
+    background: #3b82f6;
+}
+
+/* Feature Grid tweak */
+.feature-item i {
+    font-size: 1.4rem;
+}
+
+/* --- CLOSE BUTTONS CSS --- */
+
+/* Top-right 'X' button */
+.close-modal {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #94a3b8; /* Muted slate color */
+    cursor: pointer;
+    transition: color 0.2s ease;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: #ef4444; /* Red on hover */
+}
+
+/* Bottom Footer 'Close' button */
+.btn-close {
+    background-color: #64748b; /* Slate grey */
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-close:hover {
+    background-color: #475569; /* Darker slate */
+}
+
+.btn-close:active {
+    transform: scale(0.98); /* Slight click feedback */
+}
+
+/* Dark Mode specific tweaks for buttons */
+[data-theme="dark"] .close-modal {
+    color: #64748b;
+}
+
+[data-theme="dark"] .close-modal:hover {
+    color: #f87171;
+}
+
+/* --- OPTIONAL: Info Icon Hover effect --- */
+#infoBtn i {
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+#infoBtn:hover i {
+    color: #2563eb;
+    transform: scale(1.1);
+}
+
+/* Capture Warning & Mini-box color fixes for Dark Mode */
+[data-theme="dark"] .capture-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .format-mini-box {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #cbd5e1;
+}
+  </style>
+
 <body data-theme="light" class="{% block body_class %}{% endblock %}">
 
-  <!-- ===============================
-       TOP NAVBAR (same style as admin)
-  ================================== -->
   <nav class="navbar">
       <div class="navbar-left">
           <div class="brand">
-              <span class="brand-icon">
-                  <i class="fas fa-bolt"></i>
-              </span>
+             <img src="{% static 'images/lcc-logo.png' %}" style="width: 25px; height: 25px; display: block;" alt="Logo">
               <div class="brand-text">
                   <span class="brand-name">BubbleVision</span>
                   <span class="brand-sub">Teacher Portal</span>
               </div>
           </div>
-
           <i class="fas fa-bars hamburger" id="hamburgerBtn"></i>
       </div>
 
-      <!-- NAV LINKS -->
-      <!-- <div class="nav-links" id="navLinks">
-          <a href="{% url 'user_dashboard' %}"
-             class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
-              <i class="fas fa-gauge"></i><span>Dashboard</span>
-          </a>
-
-          <a href="{% url 'upload_answer_key' %}"
-             class="nav-link {% if request.resolver_match.url_name == 'upload_answer_key' %}active{% endif %}">
-              <i class="fas fa-upload"></i><span>Scan &amp; Capture</span>
-          </a>
-          <a href="{% url 'students_view' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'students_view' %}active{% endif %}">
-                <i class="fas fa-user-graduate"></i><span>Students</span>
-            </a>
-
-          <a href="{% url 'user_report' %}"
-             class="nav-link {% if request.resolver_match.url_name == 'user_report' %}active{% endif %}">
-              <i class="fas fa-file-lines"></i><span>Reports</span>
-          </a> -->
-
-          {# Remove this if teachers shouldn't see user management #}
-          <!-- <a href="{% url 'user_management' %}"
-             class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}">
-              <i class="fas fa-users"></i><span>Users</span>
-          </a>
-
-          <a href="#" class="nav-link">
-              <i class="fas fa-sliders"></i><span>Settings</span>
-          </a> -->
-      </div>
-
-      <!-- RIGHT SIDE: Theme toggle + profile -->
       <div class="navbar-right">
-          <!-- Theme toggle (same as admin) -->
-          <button class="theme-toggle" id="themeToggle" type="button">
-              <i class="fas fa-moon"></i>
-              <span id="themeLabel">Dark</span>
-          </button>
+          
+          <div class="nav-info-link" id="infoBtn" title="System Information" style="margin-right: 15px; cursor: pointer;">
+                <i class="fas fa-circle-info" style="font-size: 1.2rem;"></i>
+            </div>
 
-          <!-- Profile -->
           <div class="profile" id="profileBtn">
               {% if request.user.profile.image %}
                   <img src="{{ request.user.profile.image.url }}" class="profile-img" alt="Profile">
               {% else %}
-                  <span class="profile-initial">{{ request.user.username|slice:":1"|upper }}</span>
+                  <div class="profile-initial">{{ request.user.username|slice:":1"|upper }}</div>
               {% endif %}
 
               <div class="profile-meta">
@@ -88,15 +303,12 @@
                   <span class="profile-role">Teacher</span>
               </div>
 
-              <!-- Dropdown -->
               <div class="profile-dropdown" id="profileDropdown">
                   <p class="profile-dropdown-name">{{ request.user.username }}</p>
-                  {# change 'admin_profile' to 'user_profile' if you have a separate view #}
                   <a href="{% url 'user_profile' %}">
-                        <i class="fas fa-user"></i> Profile
-                    </a>
-
-
+                      <i class="fas fa-user-circle"></i> Profile
+                  </a>
+                  <hr>
                   <a href="{% url 'user_logout' %}" class="logout">
                       <i class="fas fa-sign-out-alt"></i> Logout
                   </a>
@@ -104,6 +316,172 @@
           </div>
       </div>
   </nav>
+
+<div id="infoModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-circle-info"></i> System Information</h3>
+            <span class="close-modal" id="closeInfoModal">&times;</span>
+        </div>
+
+        <div class="modal-tabs">
+            <button class="tab-btn active" data-tab="about">General</button>
+            <button class="tab-btn" data-tab="guides">Quick Guide</button>
+        </div>
+
+        <div class="modal-body">
+            <div id="about" class="tab-pane active">
+                <div class="bv-intro">
+                    <h4 style="color: #2563eb; margin-bottom: 10px;">
+                        <i class="fas fa-brain"></i> Powered by Machine Learning
+                    </h4>
+                    <p><strong>BubbleVision</strong> utilizes a <strong>K-Nearest Neighbors (KNN)</strong> classification algorithm. Instead of simple light-thresholding, the system "recognizes" patterns of shaded ink by comparing them to thousands of pre-verified samples.</p>
+                </div>
+                
+                <div class="bv-features-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                    <div class="feature-item">
+                        <i class="fas fa-microscope" style="color: #2563eb;"></i>
+                        <span><strong>KNN Classifier</strong><br><small>Pattern-based recognition</small></span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-wand-magic-sparkles" style="color: #f59e0b;"></i>
+                        <span><strong>Noise Filtering</strong><br><small>Ignores dust and stray marks</small></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="guides" class="tab-pane">
+                <div class="guide-section">
+                    <h4 style="margin-bottom: 12px; color: #2563eb;">
+                        <i class="fas fa-users-gear"></i> Managing Students
+                    </h4>
+                    <div class="workflow-steps">
+                    <div class="step">
+                        <span class="step-num">1</span>
+                        <div class="step-content">
+                        <p><strong>Single Entry:</strong> Add students individually by entering their Grade Level, Section, First Name, Middle Initial, Last Name, and Gender in the 'Students' dashboard.</p>
+                    
+
+                    <div class="guide-sub-section" style="background: var(--nav-bg, #f8f9fa); padding: 12px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                        <p><strong>Bulk Import (PDF/Word):</strong> You can upload an entire class list at once. Please ensure your file follows this exact format:</p>
+                        <pre style="font-family: monospace; font-size: 0.85rem; background: #eee; padding: 8px; border-radius: 4px; margin: 8px 0; color: #333;">
+        Male
+            1. [Student Name]
+            2. [Student Name]
+
+        Female
+            1. [Student Name]
+            2. [Student Name]</pre>
+                        <small style="color: #666;"><i class="fas fa-circle-info"></i> The system uses AI to parse these headers and categorize students automatically.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                    <hr style="margin: 20px 0; opacity: 0.2;">
+
+                    <h4 style="margin: 20px 0 12px; color: #2563eb;"><i class="fas fa-camera"></i> 2. Scanning & Assessment</h4>
+
+                <div class="workflow-steps">
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <div class="step-content">
+                            <p><strong>Setup Answer Key:</strong> Provide the Assessment Name, Year Level, Section, and Subject.</p>
+                            <p style="margin-top: 5px;"><strong>Upload Key:</strong> (PDF, Word, or CSV) following this format:</p>
+                            <div class="format-mini-box">
+                                1. A <br> 2. B <br> 3. C ...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-num">3</span>
+                        <div class="step-content">
+                            <p><strong>Auto-Generate Bubble Sheet:</strong> Once the key is uploaded, BubbleVision automatically creates a custom OMR sheet.</p>
+                            <small class="info-note"><i class="fas fa-magic"></i> The number of bubbles will match exactly the number of items in your key.</small>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-num">4</span>
+                        <div class="step-content">
+                            <p><strong>Capture & Upload:</strong> Use your camera to upload the completed sheets.</p>
+                            
+                            <div class="capture-warning">
+                                <i class="fas fa-expand-arrows-alt"></i>
+                                <span>
+                                    <strong>Important:</strong> Ensure the <strong>four corner boxes</strong> are clearly visible in your photo. These markers serve as the alignment guide for the <strong>KNN Algorithm</strong> to accurately locate bubbles.
+                                </span>
+                            </div>
+                            
+                            <p style="margin-top: 8px; font-size: 0.85rem;">Sheets with cut-off or blurry corner markers will fail to process.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="margin: 20px 0; opacity: 0.2;">
+
+                    <h4 style="margin-bottom: 12px; color: #2563eb;">
+                        <i class="fas fa-chart-line"></i> Analytics & Reports
+                    </h4>
+                    <div class="workflow-steps">
+                        <div class="step">
+                            <span class="step-num">5</span>
+                            <div class="step-content">
+                                <p><strong>Master List:</strong> Click the <strong>Report Icon</strong> located beside the "Add Quiz" button to open the Student's Record.</p>
+                                <p style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                                    This view presents a consolidated table of all Students, Assessments, and their corresponding scores.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <span class="step-num">6</span>
+                            <div class="step-content">
+                                <p><strong>Item Analysis:</strong> Inside the assessment list, click the <strong>Analysis Icon</strong> on a specific quiz.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 20px 0; opacity: 0.2;">
+
+                    <h4 style="margin-bottom: 12px; color: #2563eb;">
+                        <i class="fas fa-user-shield"></i> Profile & Settings
+                    </h4>
+                    <div class="workflow-steps">
+                        <div class="step">
+                            <span class="step-num">7</span>
+                            <div class="step-content">
+                                <p><strong>Account Management:</strong> Access your profile through the top-right dropdown menu to view your credentials.</p>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <span class="step-num">8</span>
+                            <div class="step-content">
+                                <p><strong>Security Updates:</strong> Within the Profile page, you can <strong>Update or Change your Current Password</strong> at any time to keep your teacher account secure.</p>
+                                
+                                <div class="status-box" style="margin-top: 15px; border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05); padding: 10px;">
+                                    <small style="color: #059669; font-weight: bold;">
+                                        <i class="fas fa-shield-halved"></i> Data Protection Active
+                                    </small>
+                                    <p style="font-size: 0.8rem; color: #666; margin: 3px 0 0 0;">
+                                        Passwords are encrypted and scanning data is processed locally using KNN.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-close" id="btnContentClose">Close</button>
+        </div>
+    </div>
+</div>
 
   <!-- ===============================
        MAIN CONTENT SHELL
@@ -170,6 +548,50 @@
             updateThemeUI();
         });
     }
+
+// Use a unique name to avoid "already declared" errors
+const infoModalOverlay = document.getElementById("infoModal");
+
+const toggleSystemInfoModal = (displayState) => { 
+    if (infoModalOverlay) infoModalOverlay.style.display = displayState; 
+};
+
+if (document.getElementById("infoBtn")) {
+    document.getElementById("infoBtn").onclick = () => toggleSystemInfoModal("block");
+}
+
+if (document.getElementById("closeInfoModal")) {
+    document.getElementById("closeInfoModal").onclick = () => toggleSystemInfoModal("none");
+}
+
+if (document.getElementById("btnContentClose")) {
+    document.getElementById("btnContentClose").onclick = () => toggleSystemInfoModal("none");
+}
+
+// Global click listener updated to use the new check
+window.addEventListener("click", (event) => {
+    if (event.target == infoModalOverlay) {
+        toggleSystemInfoModal("none");
+    }
+});
+
+// ---------- MODAL TAB NAVIGATION ----------
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabPanes = document.querySelectorAll('.tab-pane');
+
+tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-tab');
+
+        // Remove active class from all buttons and panes
+        tabButtons.forEach(b => b.classList.remove('active'));
+        tabPanes.forEach(p => p.classList.remove('active'));
+
+        // Add active class to clicked button and target pane
+        btn.classList.add('active');
+        document.getElementById(target).classList.add('active');
+    });
+});
 </script>
 
 </body>

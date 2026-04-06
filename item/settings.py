@@ -28,11 +28,11 @@ SECRET_KEY = 'django-insecure-yzoy$ls^u(^(_=cw_mrj#^%^r-@d6ssr#&i7folp(==5p8vi*)
 DEBUG = os.environ.get('DATABASE_URL') is None
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://bubble-vision-production.up.railway.app",
+    "https://bubble-visionss-production.up.railway.app",
 ]
 
 ALLOWED_HOSTS = [
-"bubble-vision-production.up.railway.app",
+"bubble-visionss-production.up.railway.app",
     "127.0.0.1",
     "localhost",
 ]
@@ -160,13 +160,12 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
 
-# DAGDAGAN MO NITO PARA SA WHITENOISE
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
