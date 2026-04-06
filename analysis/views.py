@@ -5134,9 +5134,7 @@ def students_view(request):
 
     academic_year = getattr(institution, "school_year", None)
     assigned_qs = TeacherClassAssignment.objects.filter(
-        teacher=teacher, 
-        institution=institution, 
-        school_year=academic_year
+        teacher=teacher, institution=institution, school_year=academic_year
     )
     allowed_section_ids = list(assigned_qs.values_list("section_id", flat=True).distinct())
 
@@ -5144,62 +5142,37 @@ def students_view(request):
         editing_id = request.POST.get("student_id")
         instance = None
         
-        # 1. Fetch existing student if editing
         if editing_id:
-            instance = get_object_or_404(
-                Student, 
-                id=editing_id, 
-                section_id__in=allowed_section_ids
-            )
+            instance = get_object_or_404(Student, id=editing_id, section_id__in=allowed_section_ids)
 
-        # 2. Security Check: Teacher can only add/edit students in their assigned sections
         section_id = request.POST.get("section")
-        if section_id and int(section_id) not in allowed_section_ids:
+        if section_id and int(section_id) not in set(allowed_section_ids):
             messages.error(request, "Unauthorized section.")
             return redirect("user_dashboard")
 
         form = StudentForm(request.POST, instance=instance)
-        
         if form.is_valid():
             obj = form.save(commit=False)
+            # Logic to determine if this is ADD or EDIT
             is_edit = instance is not None 
             
-            # --- GENDER LOGIC ---
-            gender_val = request.POST.get("gender")
-            if gender_val:
-                if hasattr(obj, "gender"):
-                    obj.gender = gender_val
-                elif hasattr(obj, "sex"):
-                    obj.sex = gender_val
-
-            # --- METADATA ATTACHMENT ---
-            if hasattr(obj, "institution"):
-                obj.institution = institution
-            if hasattr(obj, "school_year") and academic_year:
-                obj.school_year = academic_year
+            if hasattr(obj, "institution"): obj.institution = institution
+            if hasattr(obj, "school_year"): obj.school_year = academic_year
             
-            # Ensure the grade is set based on the chosen section
-            if hasattr(obj, "grade") and getattr(obj, "section", None):
-                obj.grade = obj.section.grade
-
             obj.save()
 
             # --- AUDIT LOG INSERTION ---
             action_type = 'EDIT' if is_edit else 'ADD'
             description = f"{action_type} student: {obj.full_name} {obj.last_name} in Section ID {obj.section_id}"
             record_audit(request, action_type, 'Students', description)
+            # ---------------------------
 
             messages.success(request, "Student saved successfully.")
             return redirect("user_dashboard")
 
-        else:
-            # 3. Handle Form Errors
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
-            return redirect("user_dashboard")
-
+        messages.error(request, "Invalid form data.")
     return redirect("user_dashboard")
+
 # helper regex
 RE_NUMBERED = re.compile(r"^\s*(\d+)\s*[\.\)\-:]\s*(.+)$")  # 1. Name / 1) Name / 1- Name / 1: Name
 RE_ANY_NUMBER_IN_LINE = re.compile(r"(\d+\s*[\.\)\-:]\s*)")  # used to strip anything before first number
@@ -5744,38 +5717,6 @@ def download_bubble_sheets_selected(request, section_id: int):
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
 
-@login_required
-@require_POST
-def delete_all_students_section(request, section_id):
-    teacher = Teacher.objects.filter(user=request.user).first()
-    institution = get_current_institution(request) or getattr(teacher, "institution", None)
-    
-    if not institution or not teacher:
-        return redirect("user_dashboard")
-
-    academic_year = getattr(institution, "school_year", None)
-    
-    # Security: Verify the teacher is assigned to this section before deleting
-    is_assigned = TeacherClassAssignment.objects.filter(
-        teacher=teacher,
-        institution=institution,
-        section_id=section_id,
-        school_year=academic_year
-    ).exists()
-
-    if not is_assigned:
-        messages.error(request, "Unauthorized action.")
-        return redirect("user_dashboard")
-
-    # Perform deletion
-    deleted_count, _ = Student.objects.filter(
-        section_id=section_id, 
-        institution=institution,
-        school_year=academic_year
-    ).delete()
-
-    messages.success(request, f"Successfully deleted all {deleted_count} students from this section.")
-    return redirect("user_dashboard")
 # if num_items <= 10: template_file = "1-10 items.pdf"
 #     elif num_items <= 15: template_file = "1-15items.pdf"
 #     elif num_items <= 20: template_file = "1-20items.pdf"
