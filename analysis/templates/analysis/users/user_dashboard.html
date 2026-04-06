@@ -291,17 +291,17 @@
     grid-column: 1 / -1 !important;
     width: 100% !important;
   }
-.class-box .header-search-container {
-    display: none !important;
-}
 
   .class-box .header-search-container {
     display: none !important;
 }
+
+/* Show search container ONLY when the box is open */
 .class-box.is-open .header-search-container {
     display: block !important;
 }
 
+/* Responsive adjustment for the header text to prevent the "G..." clipping */
 .class-box-header div h3 {
     white-space: nowrap;
     overflow: hidden;
@@ -464,13 +464,6 @@
                      placeholder="e.g. Santos">
             </div>
             <div class="form-group">
-        <label for="id_gender">Gender:</label>
-        <select name="gender" id="id_gender" class="form-control" required>
-            <option value="">Select Gender</option>
-            <option value="Male" {% if form.gender.value == "Male" %}selected{% endif %}>Male</option>
-            <option value="Female" {% if form.gender.value == "Female" %}selected{% endif %}>Female</option>
-        </select>
-    </div>
                 <label for="id_gender">Gender:</label>
                 <select name="gender" id="id_gender" class="form-control" required>
                     <option value="">Select Gender</option>
@@ -615,18 +608,13 @@
                   {% endfor %}
                 </ul>
 
-                </ul> <div class="modal-footer-actions">
-    <form action="{% url 'delete_all_students_section' sg.grouper.id %}" method="post" onsubmit="return confirm('WARNING: Delete ALL students in this section?');">
-        {% csrf_token %}
-        <button type="submit" class="btn-delete-all" style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 8px 16px; border-radius: 999px; font-weight: 700; font-size: 12px; cursor: pointer;">
-            <i class="fas fa-trash-alt"></i> Delete All Students
-        </button>
-    </form>
-    
-    {% comment %} <a href="{% url 'download_bubble_sheets_section' sg.grouper.id %}" class="btn-link" style="font-weight: 700;">
-        <i class="fas fa-download"></i> Bubble Sheets
-    </a> {% endcomment %}
-</div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;">
+                  <a href="{% url 'download_bubble_sheets_section' sg.grouper.id %}"
+                     class="btn-link"
+                     style="text-decoration:none;font-weight:700;">
+                    <i class="fas fa-download"></i> Bubble Sheets
+                  </a>
+                </div>
               </div>
             {% endfor %}
           {% endfor %}
@@ -1340,6 +1328,7 @@ function renderClassBoxes() {
 
     return `
       <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:15px; margin-bottom:15px; overflow: hidden;">
+         
         <div class="class-box-header" 
             onclick="toggleClassBox('${boxId}')" 
             style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
@@ -1373,7 +1362,7 @@ function renderClassBoxes() {
             </button>
           </div>
         </div>
-        
+
         <div class="class-box-body" style="width: 100%;">
           <div class="responsive-scroll-wrapper">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -2544,62 +2533,7 @@ function exportTallyPerItemExcel(){
 
   downloadTextFile(csv, `${subtitle}.csv`, "text/csv;charset=utf-8;");
 }
-function filterTableRealtime(input, boxId) {
-    const filter = input.value.toLowerCase();
-    const box = document.getElementById(boxId);
-    // Target only the body rows
-    const tableRows = box.querySelectorAll("tbody tr");
 
-    tableRows.forEach(row => {
-        // Skip gender group headers (Male/Female/Uncategorized)
-        if (row.querySelector('td[colspan]')) {
-            return; 
-        }
-
-        // Target the first cell (which contains the student name)
-        const studentNameCell = row.cells[0]; 
-        if (studentNameCell) {
-            const textValue = studentNameCell.textContent || studentNameCell.innerText;
-            if (textValue.toLowerCase().indexOf(filter) > -1) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
-        }
-    });
-
-    // Clean up empty gender headers
-    hideEmptyGenderHeaders(box);
-}
-
-function hideEmptyGenderHeaders(box) {
-    const rows = Array.from(box.querySelectorAll("tbody tr"));
-    let lastHeader = null;
-    let hasVisibleContent = false;
-
-    rows.forEach((row) => {
-        const isHeader = row.querySelector('td[colspan]');
-        
-        if (isHeader) {
-            // Before moving to a new header, hide the previous one if it was empty
-            if (lastHeader && !hasVisibleContent) {
-                lastHeader.style.display = "none";
-            }
-            lastHeader = row;
-            lastHeader.style.display = ""; // Reset to visible
-            hasVisibleContent = false;
-        } else {
-            if (row.style.display !== "none") {
-                hasVisibleContent = true;
-            }
-        }
-    });
-
-    // Check the very last group
-    if (lastHeader && !hasVisibleContent) {
-        lastHeader.style.display = "none";
-    }
-}
 </script>
 
 <script>
