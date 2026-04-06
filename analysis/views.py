@@ -5717,6 +5717,39 @@ def download_bubble_sheets_selected(request, section_id: int):
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
 
+@login_required
+@require_POST
+def delete_all_students_section(request, section_id):
+    teacher = Teacher.objects.filter(user=request.user).first()
+    institution = get_current_institution(request) or getattr(teacher, "institution", None)
+    
+    if not institution or not teacher:
+        return redirect("user_dashboard")
+
+    academic_year = getattr(institution, "school_year", None)
+    
+    # Security: Verify the teacher is assigned to this section before deleting
+    is_assigned = TeacherClassAssignment.objects.filter(
+        teacher=teacher,
+        institution=institution,
+        section_id=section_id,
+        school_year=academic_year
+    ).exists()
+
+    if not is_assigned:
+        messages.error(request, "Unauthorized action.")
+        return redirect("user_dashboard")
+
+    # Perform deletion
+    deleted_count, _ = Student.objects.filter(
+        section_id=section_id, 
+        institution=institution,
+        school_year=academic_year
+    ).delete()
+
+    messages.success(request, f"Successfully deleted all {deleted_count} students from this section.")
+    return redirect("user_dashboard")
+
 # if num_items <= 10: template_file = "1-10 items.pdf"
 #     elif num_items <= 15: template_file = "1-15items.pdf"
 #     elif num_items <= 20: template_file = "1-20items.pdf"
