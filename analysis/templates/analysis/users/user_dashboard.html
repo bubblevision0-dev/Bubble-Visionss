@@ -295,31 +295,19 @@
     display: none !important;
 }
 
-<<<<<<< HEAD
 =======
   .class-box .header-search-container {
     display: none !important;
 }
-
-/* Show search container ONLY when the box is open */
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
 .class-box.is-open .header-search-container {
     display: block !important;
 }
 
-<<<<<<< HEAD
-=======
-/* Responsive adjustment for the header text to prevent the "G..." clipping */
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
 .class-box-header div h3 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-<<<<<<< HEAD
-  
-=======
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
 
 </style>
 
@@ -477,7 +465,6 @@
                      placeholder="e.g. Santos">
             </div>
             <div class="form-group">
-<<<<<<< HEAD
         <label for="id_gender">Gender:</label>
         <select name="gender" id="id_gender" class="form-control" required>
             <option value="">Select Gender</option>
@@ -485,7 +472,6 @@
             <option value="Female" {% if form.gender.value == "Female" %}selected{% endif %}>Female</option>
         </select>
     </div>
-=======
                 <label for="id_gender">Gender:</label>
                 <select name="gender" id="id_gender" class="form-control" required>
                     <option value="">Select Gender</option>
@@ -493,7 +479,6 @@
                     <option value="Female" {% if form.gender.value == "Female" %}selected{% endif %}>Female</option>
                 </select>
             </div>
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
           </div>
 
           <div class="form-actions">
@@ -1356,11 +1341,6 @@ function renderClassBoxes() {
 
     return `
       <div class="class-box" id="${boxId}" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:15px; margin-bottom:15px; overflow: hidden;">
-<<<<<<< HEAD
-        
-=======
-         
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
         <div class="class-box-header" 
             onclick="toggleClassBox('${boxId}')" 
             style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
@@ -1394,10 +1374,7 @@ function renderClassBoxes() {
             </button>
           </div>
         </div>
-<<<<<<< HEAD
-=======
-
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
+        
         <div class="class-box-body" style="width: 100%;">
           <div class="responsive-scroll-wrapper">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -2704,8 +2681,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-<<<<<<< HEAD
-=======
 function filterTableRealtime(input, boxId) {
     const filter = input.value.toLowerCase();
     const box = document.getElementById(boxId);
@@ -2756,7 +2731,6 @@ function hideEmptyGenderHeaders(box) {
         }
     });
 }
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
 </script>
 
 {% endblock %}
