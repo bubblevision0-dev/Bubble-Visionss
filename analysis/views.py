@@ -5134,7 +5134,9 @@ def students_view(request):
 
     academic_year = getattr(institution, "school_year", None)
     assigned_qs = TeacherClassAssignment.objects.filter(
-        teacher=teacher, institution=institution, school_year=academic_year
+        teacher=teacher, 
+        institution=institution, 
+        school_year=academic_year
     )
     allowed_section_ids = list(assigned_qs.values_list("section_id", flat=True).distinct())
 
@@ -5142,74 +5144,60 @@ def students_view(request):
         editing_id = request.POST.get("student_id")
         instance = None
         
+        # 1. Fetch existing student if editing
         if editing_id:
-            instance = get_object_or_404(Student, id=editing_id, section_id__in=allowed_section_ids)
-
-        if editing_student_id:
             instance = get_object_or_404(
-                Student,
-                id=editing_student_id,
-                section_id__in=allowed_section_ids,
+                Student, 
+                id=editing_id, 
+                section_id__in=allowed_section_ids
             )
 
-        # Teacher can only add students to their own assigned sections
+        # 2. Security Check: Teacher can only add/edit students in their assigned sections
         section_id = request.POST.get("section")
-        if section_id and int(section_id) not in set(allowed_section_ids):
+        if section_id and int(section_id) not in allowed_section_ids:
             messages.error(request, "Unauthorized section.")
             return redirect("user_dashboard")
 
         form = StudentForm(request.POST, instance=instance)
+        
         if form.is_valid():
             obj = form.save(commit=False)
-            # Logic to determine if this is ADD or EDIT
             is_edit = instance is not None 
             
-            if hasattr(obj, "institution"): obj.institution = institution
-            if hasattr(obj, "school_year"): obj.school_year = academic_year
-            
-            obj.save()
-
-            # --- AUDIT LOG INSERTION ---
-            action_type = 'EDIT' if is_edit else 'ADD'
-            description = f"{action_type} student: {obj.full_name} {obj.last_name} in Section ID {obj.section_id}"
-            record_audit(request, action_type, 'Students', description)
-            # ---------------------------
-
-            messages.success(request, "Student saved successfully.")
-            return redirect("user_dashboard")
-
-        messages.error(request, "Invalid form data.")
-
-            # --- GENDER LOGIC FIX ---
-            # Capture the gender from the dropdown added to the template
+            # --- GENDER LOGIC ---
             gender_val = request.POST.get("gender")
             if gender_val:
-                # Check if your model uses 'gender' or 'sex' field name
                 if hasattr(obj, "gender"):
                     obj.gender = gender_val
                 elif hasattr(obj, "sex"):
                     obj.sex = gender_val
 
-            # Attach institution & school year metadata
+            # --- METADATA ATTACHMENT ---
             if hasattr(obj, "institution"):
                 obj.institution = institution
             if hasattr(obj, "school_year") and academic_year:
                 obj.school_year = academic_year
             
             # Ensure the grade is set based on the chosen section
-            if hasattr(obj, "grade") and obj.section:
+            if hasattr(obj, "grade") and getattr(obj, "section", None):
                 obj.grade = obj.section.grade
 
             obj.save()
+
+            # --- AUDIT LOG INSERTION ---
+            action_type = 'EDIT' if is_edit else 'ADD'
+            description = f"{action_type} student: {obj.full_name} {obj.last_name} in Section ID {obj.section_id}"
+            record_audit(request, action_type, 'Students', description)
+
             messages.success(request, "Student saved successfully.")
             return redirect("user_dashboard")
 
-        # If form is invalid, show errors
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
-        
-        return redirect("user_dashboard")
+        else:
+            # 3. Handle Form Errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
+            return redirect("user_dashboard")
 
     return redirect("user_dashboard")
 # helper regex
