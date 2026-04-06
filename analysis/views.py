@@ -5145,8 +5145,6 @@ def students_view(request):
         if editing_id:
             instance = get_object_or_404(Student, id=editing_id, section_id__in=allowed_section_ids)
 
-<<<<<<< HEAD
-=======
         if editing_student_id:
             instance = get_object_or_404(
                 Student,
@@ -5155,7 +5153,6 @@ def students_view(request):
             )
 
         # Teacher can only add students to their own assigned sections
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
         section_id = request.POST.get("section")
         if section_id and int(section_id) not in set(allowed_section_ids):
             messages.error(request, "Unauthorized section.")
@@ -5164,7 +5161,6 @@ def students_view(request):
         form = StudentForm(request.POST, instance=instance)
         if form.is_valid():
             obj = form.save(commit=False)
-<<<<<<< HEAD
             # Logic to determine if this is ADD or EDIT
             is_edit = instance is not None 
             
@@ -5183,7 +5179,6 @@ def students_view(request):
             return redirect("user_dashboard")
 
         messages.error(request, "Invalid form data.")
-=======
 
             # --- GENDER LOGIC FIX ---
             # Capture the gender from the dropdown added to the template
@@ -5216,7 +5211,6 @@ def students_view(request):
         
         return redirect("user_dashboard")
 
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
     return redirect("user_dashboard")
 # helper regex
 RE_NUMBERED = re.compile(r"^\s*(\d+)\s*[\.\)\-:]\s*(.+)$")  # 1. Name / 1) Name / 1- Name / 1: Name
@@ -5794,10 +5788,6 @@ def delete_all_students_section(request, section_id):
 
     messages.success(request, f"Successfully deleted all {deleted_count} students from this section.")
     return redirect("user_dashboard")
-<<<<<<< HEAD
-=======
-
->>>>>>> 761b24e76de1b4744758a449fbcdb336fd17dc1a
 # if num_items <= 10: template_file = "1-10 items.pdf"
 #     elif num_items <= 15: template_file = "1-15items.pdf"
 #     elif num_items <= 20: template_file = "1-20items.pdf"
