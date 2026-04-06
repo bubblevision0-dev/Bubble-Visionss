@@ -26,6 +26,13 @@ urlpatterns = [
     path('delete_institution_admin/<int:admin_id>/', views.delete_institution_admin, name='delete_institution_admin'),
     # ================== ADMIN LOGIN & DASHBOARD ==================
     path("login/", views.admin_login, name="admin_login"),
+    path('change-password-required/', views.change_password_required, name='change_password_required'),
+    path('password-reset/', views.password_reset_request, name='password_reset_request'),
+    path('password-reset/confirm-send/', views.password_reset_confirm_send, name='password_reset_confirm_send'),
+    path('password-reset/verify/', views.verify_otp, name='verify_otp'),
+    path('password-reset/resend-otp/', views.resend_otp, name='resend_otp'),
+    path('password-reset/new-password/', views.set_new_password, name='set_new_password'),
+    path('audit-log/', views.view_audit_log, name='view_audit_log'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('update-sy/', views.update_school_year, name='update_school_year'),
     path('history/', views.sy_history_list, name='sy_history_list'),

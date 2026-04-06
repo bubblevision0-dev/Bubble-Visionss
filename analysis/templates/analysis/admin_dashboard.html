@@ -5,6 +5,7 @@
 
 {% block content %}
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 {% url 'add_grade' as add_grade_url %}
 {% url 'user_management' as user_management_url %}
 {% url 'upload_answer_key' as upload_answer_key_url %}
@@ -67,11 +68,24 @@
 
     .user-management-grid {
         display: grid;
-        grid-template-columns: 350px 1fr;
+        grid-template-columns: 1fr 2fr;
         gap: 20px;
         margin-top: 20px;
     }
-    @media (max-width: 992px) { .user-management-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 992px) {
+      .user-management-grid, 
+      .grading-setup-grid,
+      .grade-dashboard {
+          grid-template-columns: 1fr !important; /* Stacks columns vertically */
+      }
+
+      .grading-setup-column-right {
+          border-left: none !important;
+          border-top: 1px solid #e2e8f0;
+          padding-left: 0 !important;
+          padding-top: 30px;
+      }
+  }
 
     .assignment-tag {
         background: #f1f5f9;
@@ -506,6 +520,89 @@
       .details-gp{ align-items:flex-start; }
       .gp-mini-bar{ justify-content:flex-start; }
     }
+    /* RESPONSIVE DASHBOARD GRID */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    /* RESPONSIVE FORM COLUMNS (Grading Setup) */
+    .grading-setup-grid {
+        display: grid; 
+        grid-template-columns: 1fr 1.5fr; 
+        gap: 30px;
+    }
+    .grading-setup-column-right {
+        border-left: 1px solid #e2e8f0;
+        padding-left: 30px;
+    }
+
+    /* MOBILE ADJUSTMENTS (Max-width: 768px) */
+    @media (max-width: 640px) {
+        /* Stack the Dashboard header info */
+        .page-header > div > div {
+          flex-direction: column !important;
+          align-items: flex-start !important;
+      }
+      
+      .archive-actions {
+          justify-content: flex-start !important;
+          width: 100%;
+          margin-top: 10px;
+      }
+
+        .grading-setup-grid {
+            grid-template-columns: 1fr !important;
+            gap: 40px;
+        }
+
+        .grading-setup-column-right {
+            border-left: none !important;
+            padding-left: 0 !important;
+            border-top: 1px solid #e2e8f0; /* Changes line to horizontal */
+            padding-top: 30px;
+        }
+        
+        .grading-setup-grid > div:last-child {
+            border-left: none !important;
+            padding-left: 0 !important;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        /* Stack Grade Levels (Add vs List) */
+        .grade-dashboard {
+            grid-template-columns: 1fr !important;
+        }
+
+        /* User Management (Add vs List) */
+        .user-management-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        /* Period selection in header */
+        .page-header .btn-icon {
+            width: 100%;
+            margin-top: 10px;
+        }
+    }
+
+    /* TABLE SCROLLING FOR SMALL SCREENS */
+    .user-list-container, .archive-table-wrap, .details-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        display: block;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* CARD HOVER FIX FOR MOBILE */
+    @media (hover: none) {
+        .nav-info-card:hover {
+            transform: none;
+        }
+    } 
 </style>
 
 <div class="page-header">
@@ -560,7 +657,7 @@
         <div class="small-icon-bg" style="background:#fffbeb; color:#f59e0b;">
             <i class="fas fa-layer-group"></i>
         </div>
-        <div class="label" style="margin-top:10px; font-weight:700; color:#0f172a; font-size:0.85rem;">Grades & Subjects</div>
+        <div class="label" style="margin-top:10px; font-weight:700; color:#0f172a; font-size:0.85rem;">Academic Grading</div>
         <div id="toggle-text" class="subtext" style="font-size:0.7rem; color:#f59e0b; margin-top:2px;">Click to Expand</div>
     </a>
 
@@ -579,6 +676,14 @@
         <div class="label" style="margin-top:10px; font-weight:700; color:#0f172a; font-size:0.85rem;">Archives</div>
         <div id="archive-toggle-text" class="subtext" style="font-size:0.7rem; color:#64748b; margin-top:2px;">View Past Years</div>
     </a>
+
+    <a href="javascript:void(0)" onclick="toggleAuditTrail()" class="card stat-card nav-info-card" style="padding:15px; text-align:center; border-left: 4px solid #6366f1; text-decoration: none;">
+        <div class="small-icon-bg" style="background:#eef2ff; color:#6366f1;">
+            <i class="fas fa-user-shield"></i>
+        </div>
+        <div class="label" style="margin-top:10px; font-weight:700; color:#0f172a; font-size:0.85rem;">Audit Trail</div>
+        <div id="audit-toggle-text" class="subtext" style="font-size:0.7rem; color:#64748b; margin-top:2px;">View System Movements</div>
+    </a>
 </section>
 
 <div id="grading-section" style="display: {% if request.GET.edit or form.errors %}block{% else %}none{% endif %};">
@@ -591,76 +696,77 @@
             <button onclick="toggleGradingSection()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">&times;</button>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px;">
-            <div>
-                <h4 style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">ADD / UPDATE PERIOD</h4>
+        <div class="grading-setup-grid">
+          <div>
+              <h4 style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">ADD / UPDATE PERIOD</h4>
 
-                {# ✅ FIX: keep user on the SAME tab after add/update grading period #}
-                <form method="POST" action="{% url 'add_grading_period' %}?open=grading" data-stay-tab="grading">
-                    {% csrf_token %}
-                    <div class="field">
-                        <label>Grading Period</label>
-                        <select class="control" name="period" required>
-                            <option value="Exam">Exam</option>
-                            <option value="1st Grading">1st Grading</option>
-                            <option value="2nd Grading">2nd Grading</option>
-                            <option value="3rd Grading">3rd Grading</option>
-                            <option value="4th Grading">4th Grading</option>
-                            <option value="Prelim">Prelim</option>
-                            <option value="Midterm">Midterm</option>
-                            <option value="Semi-Finals">Semi-Finals</option>
-                            <option value="Finals">Finals</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="field" style="flex: 1;">
-                            <label>Start Date</label>
-                            <input type="date" class="control" name="start_date" required>
-                        </div>
-                        <div class="field" style="flex: 1;">
-                            <label>End Date</label>
-                            <input type="date" class="control" name="end_date" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btnP" style="width: 100%;">Save Period</button>
-                </form>
-            </div>
+              <form method="POST" action="{% url 'add_grading_period' %}?open=grading" data-stay-tab="grading">
+                  {% csrf_token %}
+                  <div class="field">
+                      <label>Grading Period</label>
+                      <select class="control" name="period" required>
+                          <option value="Exam">Exam</option>
+                          <option value="1st Grading">1st Grading</option>
+                          <option value="2nd Grading">2nd Grading</option>
+                          <option value="3rd Grading">3rd Grading</option>
+                          <option value="4th Grading">4th Grading</option>
+                          <option value="Prelim">Prelim</option>
+                          <option value="Midterm">Midterm</option>
+                          <option value="Semi-Finals">Semi-Finals</option>
+                          <option value="Finals">Finals</option>
+                      </select>
+                  </div>
+                  
+                  <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                      <div class="field">
+                          <label>Start Date</label>
+                          <input type="date" class="control" name="start_date" required>
+                      </div>
+                      <div class="field">
+                          <label>End Date</label>
+                          <input type="date" class="control" name="end_date" required>
+                      </div>
+                  </div>
+                  <button type="submit" class="btnP" style="width: 100%;">Save Period</button>
+              </form>
+          </div>
 
-            <div style="border-left: 1px solid #e2e8f0; padding-left: 30px;">
-                <h4 style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">EXISTING PERIODS</h4>
-                {% if grading_periods %}
-                <table class="mini-table">
-                    <thead>
-                        <tr>
-                            <th>Period</th>
-                            <th>Duration</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for period in grading_periods %}
-                        <tr>
-                            <td><span class="pill">{{ period.period }}</span></td>
-                            <td>{{ period.start_date|date:"M d" }} - {{ period.end_date|date:"M d" }}</td>
-                            <td>
-                                {# ✅ FIX: keep user on the SAME tab after delete grading period #}
-                                <form method="POST" action="{% url 'delete_grading_period' %}?open=grading" style="display:inline;" data-stay-tab="grading">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="grading_period_id" value="{{ period.id }}">
-                                    <button type="submit" style="color: #ef4444; border:none; background:none; cursor:pointer;" onclick="return confirm('Delete?')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 20px;">No periods defined for this year.</p>
-                {% endif %}
-            </div>
-        </div>
+          <div class="grading-setup-column-right">
+              <h4 style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">EXISTING PERIODS</h4>
+              {% if grading_periods %}
+              <div class="archive-table-wrap"> 
+                  <table class="mini-table">
+                      <thead>
+                          <tr>
+                              <th>Period</th>
+                              <th>Duration</th>
+                              <th>Action</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for period in grading_periods %}
+                          <tr>
+                              <td><span class="pill">{{ period.period }}</span></td>
+                              <td style="white-space: nowrap;">{{ period.start_date|date:"M d" }} - {{ period.end_date|date:"M d" }}</td>
+                              <td>
+                                  <form method="POST" action="{% url 'delete_grading_period' %}?open=grading" style="display:inline;" data-stay-tab="grading">
+                                      {% csrf_token %}
+                                      <input type="hidden" name="grading_period_id" value="{{ period.id }}">
+                                      <button type="submit" style="color: #ef4444; border:none; background:none; cursor:pointer;" onclick="return confirm('Delete?')">
+                                          <i class="fas fa-trash"></i>
+                                      </button>
+                                  </form>
+                              </td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+              {% else %}
+              <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 20px;">No periods defined for this year.</p>
+              {% endif %}
+          </div>
+      </div>
     </div>
 </div>
 
@@ -1265,6 +1371,86 @@
             </div>
         </form>
 
+    </div>
+</div>
+
+<div id="audit-trail-section" style="display: none; margin-top: 20px;">
+    <div class="integrated-section" style="background: #fff; border-radius: 12px; padding: 25px; border: 1px solid #e2e8f0;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+                <h3 style="font-weight: 800; color: #0f172a; margin: 0;">
+                    <i class="fas fa-history" style="margin-right: 10px; color: #6366f1;"></i> 
+                    System Audit Trail
+                </h3>
+                <p style="color: #64748b; font-size: 0.9rem; margin-top: 4px;">Detailed logs of user actions: Additions, Edits, and Deletions.</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="auditSearchInput" placeholder="Search logs..." 
+                      style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.8rem;">
+                
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <input type="date" id="dateFrom" style="padding: 5px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.8rem;">
+                    <span style="color: #64748b; font-size: 0.8rem;">to</span>
+                    <input type="date" id="dateTo" style="padding: 5px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.8rem;">
+                </div>
+
+                <button type="button" onclick="filterAuditTable()" class="btnP" style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Filter
+                </button>
+                
+                <button type="button" onclick="clearFilters()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem;">
+                    Clear
+                </button>
+                
+                <button onclick="toggleAuditTrail()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
+            </div>
+        </div>
+
+        <div class="log-card" style="border: 1px solid #f1f5f9; border-radius: 12px; overflow: hidden;">
+            <div style="overflow-x: auto;">
+                <table class="table-audit" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #f8fafc;">
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">Timestamp</th>
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">User</th>
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">Action</th>
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">
+                                {{ log.timestamp|date:"M d, Y" }} <small style="color: #94a3b8;">{{ log.timestamp|date:"h:i A" }}</small>
+                            </td>
+                            <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">{{ log.username_display }}</td>
+                            <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">
+                                <span class="badge-action 
+                                    {% if log.action_type == 'ADD' %}bg-add
+                                    {% elif log.action_type == 'EDIT' %}bg-edit
+                                    {% elif log.action_type == 'DELETE' %}bg-delete
+                                    {% else %}bg-login{% endif %}"
+                                    style="padding: 4px 10px; border-radius: 999px; font-size: 10px; color: #fff; font-weight: 800;">
+                                    {{ log.action_type }}
+                                </span>
+                            </td>
+                            <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; color: #475569;">{{ log.description }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 30px; color: #94a3b8;">No recent activity found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding: 15px; text-align: center; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <a href="{% url 'view_audit_log' %}" style="color: #6366f1; font-weight: 700; text-decoration: none; font-size: 0.85rem;">
+                    View Full System Logs <i class="fas fa-external-link-alt" style="font-size: 0.7rem; margin-left: 5px;"></i>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -2039,6 +2225,107 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 });
+
+function toggleAuditTrail() {
+    const auditSection = document.getElementById('audit-trail-section');
+    const toggleText = document.getElementById('audit-toggle-text');
+    
+    // Hide other sections first (standard dashboard behavior)
+    const sections = ['grading-section', 'grade-management-section', 'user-management-section', 'archive-section'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    if (auditSection.style.display === 'none') {
+        auditSection.style.display = 'block';
+        toggleText.innerText = 'Click to Close';
+        auditSection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        auditSection.style.display = 'none';
+        toggleText.innerText = 'View System Movements';
+    }
+}
+
+function filterTable() {
+    // Get search input value
+    const input = document.getElementById("auditSearchInput");
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector(".table-audit");
+    const tr = table.getElementsByTagName("tr");
+
+    // Loop through all table rows (skipping the header)
+    for (let i = 1; i < tr.length; i++) {
+        let rowVisible = false;
+        const tds = tr[i].getElementsByTagName("td");
+
+        // Check each cell in the row
+        for (let j = 0; j < tds.length; j++) {
+            if (tds[j]) {
+                const textValue = tds[j].textContent || tds[j].innerText;
+                if (textValue.toLowerCase().indexOf(filter) > -1) {
+                    rowVisible = true;
+                    break;
+                }
+            }
+        }
+
+        // Show/Hide row based on match
+        tr[i].style.display = rowVisible ? "" : "none";
+    }
+}
+
+// Optional: Search as you type
+document.getElementById("auditSearchInput").addEventListener("keyup", filterTable);
+
+function filterAuditTable() {
+    const searchText = document.getElementById("auditSearchInput").value.toLowerCase();
+    const dateFrom = document.getElementById("dateFrom").value; // Format: YYYY-MM-DD
+    const dateTo = document.getElementById("dateTo").value;     // Format: YYYY-MM-DD
+    
+    const table = document.querySelector(".table-audit");
+    const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName("td");
+        if (cells.length < 4) continue; // Skip "No activity found" row
+
+        // 1. Text Search Logic
+        const rowText = rows[i].textContent.toLowerCase();
+        const matchesText = rowText.includes(searchText);
+
+        // 2. Date Logic
+        // We extract the date. Django outputs "M d, Y" usually. 
+        // To make it comparable, we convert the cell text to a JS Date object.
+        const dateCellText = cells[0].innerText; // e.g., "Oct 24, 2023"
+        const rowDate = new Date(dateCellText);
+        rowDate.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
+
+        let matchesDate = true;
+
+        if (dateFrom) {
+            const from = new Date(dateFrom);
+            from.setHours(0, 0, 0, 0);
+            if (rowDate < from) matchesDate = false;
+        }
+
+        if (dateTo) {
+            const to = new Date(dateTo);
+            to.setHours(0, 0, 0, 0);
+            if (rowDate > to) matchesDate = false;
+        }
+
+        // Show row only if BOTH text and date conditions are met
+        rows[i].style.display = (matchesText && matchesDate) ? "" : "none";
+    }
+}
+
+function clearFilters() {
+    document.getElementById("auditSearchInput").value = "";
+    document.getElementById("dateFrom").value = "";
+    document.getElementById("dateTo").value = "";
+    filterAuditTable(); // Reset table view
+}
 </script>
 
 {% endblock %}

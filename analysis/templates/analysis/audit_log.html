@@ -1,0 +1,94 @@
+{% extends "analysis/base.html" %}
+{% load static %}
+
+{% block title %}Audit Trail | Admin Portal{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/user_dashboard.css' %}">
+
+<style>
+    .audit-shell { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+    .log-card { background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 20px; border: 1px solid #e2e8f0; }
+    
+    .table-audit { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+    .table-audit th { background: #f8fafc; padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-audit td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    
+    /* Action Badges */
+    .badge-action { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; color: white; }
+    .bg-add { background: #10b981; }    /* Green */
+    .bg-edit { background: #3b82f6; }   /* Blue */
+    .bg-delete { background: #ef4444; } /* Red */
+    .bg-login { background: #6366f1; }  /* Indigo */
+    
+    .ip-text { font-family: monospace; color: #64748b; font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+</style>
+
+<div class="audit-shell">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h2 style="font-weight: 800; color: #0f172a;">System Audit Trail</h2>
+            <p style="color: #64748b; margin-top: 4px;">Monitoring all user movements and data changes.</p>
+        </div>
+        <form method="GET" style="display: flex; gap: 10px;">
+            <input type="text" name="q" placeholder="Search logs..." value="{{ request.GET.q }}" 
+                   style="padding: 8px 15px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none;">
+            <button type="submit" class="gp-btn active">Filter</button>
+        </form>
+    </div>
+
+    <div class="log-card">
+        <div style="overflow-x: auto;">
+            <table class="table-audit">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Module</th>
+                        <th>Description</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td style="color: #64748b; white-space: nowrap;">
+                            {{ log.timestamp|date:"M d, Y" }}<br>
+                            <small>{{ log.timestamp|date:"h:i A" }}</small>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 30px; height: 30px; background: #e2e8f0; border-radius: 50%; display: grid; place-items: center; font-weight: bold; font-size: 12px;">
+                                    {{ log.username_display|slice:":1"|upper }}
+                                </div>
+                                <strong>{{ log.username_display }}</strong>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge-action 
+                                {% if log.action_type == 'ADD' %}bg-add
+                                {% elif log.action_type == 'EDIT' %}bg-edit
+                                {% elif log.action_type == 'DELETE' %}bg-delete
+                                {% else %}bg-login{% endif %}">
+                                {{ log.get_action_type_display|default:log.action_type }}
+                            </span>
+                        </td>
+                        <td style="font-weight: 600; color: #475569;">{{ log.module }}</td>
+                        <td style="max-width: 300px; line-height: 1.4;">{{ log.description }}</td>
+                        <td><span class="ip-text">{{ log.ip_address|default:"Unknown" }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                            <i class="fas fa-history" style="font-size: 30px; margin-bottom: 10px; display: block;"></i>
+                            No activity logs found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

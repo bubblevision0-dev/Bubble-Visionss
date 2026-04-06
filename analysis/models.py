@@ -12,7 +12,9 @@ class Institution(models.Model):
 class InstitutionAdmin(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)  # Ensure this field exists
     institution = models.ForeignKey(Institution, on_delete=models.CASCADE)
+    recovery_email = models.EmailField(max_length=255, null=True, blank=True)
     is_active = models.BooleanField(default=True)  # Add an active status for the admin
+    is_first_login = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.institution.name}" 
@@ -451,3 +453,22 @@ class AssessmentRecord(models.Model):
 
     def __str__(self):
         return f"{self.institution} {self.school_year} {self.student} {self.score}/{self.max_score}"
+
+class AuditTrail(models.Model):
+    ACTION_CHOICES = [
+        ('LOGIN', 'Login'),
+        ('ADD', 'Add/Create'),
+        ('EDIT', 'Edit/Update'),
+        ('DELETE', 'Delete'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    username_display = models.CharField(max_length=150) # Backup if user is deleted
+    action_type = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    module = models.CharField(max_length=100) # e.g., "Students", "Answer Key"
+    description = models.TextField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']

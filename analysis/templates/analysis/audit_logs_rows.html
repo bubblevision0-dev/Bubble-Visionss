@@ -1,0 +1,25 @@
+{% for log in logs %}
+<tr>
+    <td style="white-space: nowrap;">{{ log.timestamp|date:"M d, Y H:i" }}</td>
+    <td><strong>{{ log.username_display }}</strong></td>
+    <td>
+        <span class="badge-action 
+            {% if log.action_type == 'ADD' %}bg-add
+            {% elif log.action_type == 'EDIT' %}bg-edit
+            {% elif log.action_type == 'DELETE' %}bg-delete
+            {% else %}bg-login{% endif %}">
+            {{ log.action_type }}
+        </span>
+    </td>
+    <td><span style="color: #64748b; font-weight: 600;">{{ log.module }}</span></td>
+    <td>{{ log.description }}</td>
+    <td><span class="ip-text">{{ log.ip_address }}</span></td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+        <div style="font-size: 24px; margin-bottom: 10px;">🔍</div>
+        No audit logs found matching your criteria.
+    </td>
+</tr>
+{% endfor %}

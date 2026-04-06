@@ -22,6 +22,9 @@ from django.db.models import Q
 from datetime import date
 from django.db.models import Avg, Count, Q, Case, When, IntegerField
 import re
+import random
+import time
+from django.core.mail import send_mail
 import zipfile
 from io import BytesIO
 from reportlab.pdfgen import canvas
@@ -612,37 +615,284 @@ def is_institution_admin(user):
 
 
 def admin_login(request):
-    """
-    One login page:
-    - superuser -> admin_dashboard
-    - assigned institution admin -> admin_dashboard (same dashboard after login)
-    """
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
-
         user = authenticate(request, username=username, password=password)
 
         if user is None:
             messages.error(request, "Invalid username or password.")
             return redirect("admin_login")
 
-        # Superuser -> Admin Dashboard
+        # Superuser flows as normal
         if user.is_superuser:
             login(request, user)
             return redirect("admin_dashboard")
 
-        # Institution admin -> must be authorized, then Admin Dashboard
+        # Institution admin logic
         try:
-            InstitutionAdmin.objects.select_related("institution").get(user=user, is_active=True)
+            admin_profile = InstitutionAdmin.objects.select_related("institution").get(user=user, is_active=True)
+            
+            # Check if this is the first login
+            if admin_profile.is_first_login:
+                # Store user ID in session temporarily to verify identity on the change page
+                # without fully logging them in yet (optional security)
+                request.session['temp_admin_user_id'] = user.id
+                return redirect("change_password_required")
+            
+            login(request, user)
+            return redirect("admin_dashboard")
+
         except InstitutionAdmin.DoesNotExist:
             messages.error(request, "You are not authorized to access this portal.")
             return redirect("admin_login")
 
-        login(request, user)
+    return render(request, "analysis/admin_login.html")
+
+def change_password_required(request):
+    user_id = request.session.get('temp_admin_user_id')
+    
+    if not user_id:
+        messages.error(request, "Session expired. Please login again.")
+        return redirect('admin_login')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        # Get the associated admin profile
+        admin_profile = InstitutionAdmin.objects.get(user=user)
+    except (User.DoesNotExist, InstitutionAdmin.DoesNotExist):
+        return redirect('admin_login')
+
+    if request.method == "POST":
+        email_input = request.POST.get("email")
+        new_pw = request.POST.get("new_password")
+        confirm_pw = request.POST.get("confirm_password")
+
+        if new_pw != confirm_pw:
+            messages.error(request, "Passwords do not match.")
+        elif len(new_pw) < 8:
+            messages.error(request, "Password must be at least 8 characters.")
+        else:
+            # 1. Update the User Password
+            user.set_password(new_pw)
+            user.save()
+            
+            # 2. Update the InstitutionAdmin Profile
+            admin_profile.recovery_email = email_input # Save to your new field
+            admin_profile.is_first_login = False
+            admin_profile.save()
+
+            # 3. Log them in and clear session
+            login(request, user)
+            request.session.pop('temp_admin_user_id', None)
+            
+            messages.success(request, "Account secured! Welcome to the Dashboard.")
+            return redirect("admin_dashboard")
+
+    return render(request, "analysis/change_password_required.html")
+
+def password_reset_request(request):
+    if request.method == "POST":
+        username = request.POST.get('username')
+        try:
+            user = User.objects.get(username=username)
+            admin_profile = InstitutionAdmin.objects.get(user=user)
+            
+            if admin_profile.recovery_email:
+                # Store data in session
+                request.session['reset_user_id'] = user.id
+                request.session['reset_email'] = admin_profile.recovery_email
+                
+                # Mask email for UI: "jo***@email.com"
+                email_parts = admin_profile.recovery_email.split("@")
+                masked = email_parts[0][:2] + "********" + "@" + email_parts[1]
+                request.session['masked_email'] = masked
+                
+                return redirect('password_reset_confirm_send')
+            else:
+                messages.error(request, "No recovery email found for this admin account.")
+        except (User.DoesNotExist, InstitutionAdmin.DoesNotExist):
+            messages.error(request, "Admin username not found.")
+            
+    return render(request, 'analysis/password_reset_request.html')
+
+# STEP 2: The "Automatic" Send Page
+def password_reset_confirm_send(request):
+    masked_email = request.session.get('masked_email')
+    full_email = request.session.get('reset_email')
+    
+    if not full_email:
+        return redirect('password_reset_request')
+
+    if request.method == "POST":
+        otp = str(random.randint(100000, 999999))
+        
+        # --- ADDED: Store OTP and Timestamp ---
+        request.session['reset_otp'] = otp
+        request.session['otp_created_at'] = time.time()  # Stores current time in seconds
+        
+        send_mail(
+            'Security Verification Code',
+            f'Your 6-digit verification code is: {otp}. This code will expire in 5 minutes.',
+            'noreply@system.com',
+            [full_email],
+            fail_silently=False,
+        )
+        return redirect('verify_otp')
+
+    return render(request, 'analysis/password_reset_confirm_send.html', {'masked_email': masked_email})
+
+# STEP 3: Verify 6-Digit Code
+def verify_otp(request):
+    if request.method == "POST":
+        user_code = request.POST.get('otp_code')
+        session_otp = request.session.get('reset_otp')
+        created_at = request.session.get('otp_created_at')
+
+        # 1. Check if the session data exists
+        if not session_otp or not created_at:
+            messages.error(request, "Session expired. Please request a new code.")
+            return redirect('password_reset_request')
+
+        # 2. Check for Expiration (300 seconds = 5 minutes)
+        # current_time - start_time = seconds_passed
+        elapsed_time = time.time() - created_at
+        
+        if elapsed_time > 300:
+            # Clean up the expired session data
+            del request.session['reset_otp']
+            del request.session['otp_created_at']
+            messages.error(request, "The code has expired (5-minute limit). Please resend a new one.")
+            return redirect('password_reset_confirm_send')
+
+        # 3. Verify the Code
+        if user_code == session_otp:
+            request.session['otp_verified'] = True
+            # Optional: Clean up OTP data after successful verification
+            del request.session['reset_otp']
+            del request.session['otp_created_at']
+            
+            return redirect('set_new_password')
+        else:
+            messages.error(request, "Invalid verification code. Please try again.")
+            
+    return render(request, 'analysis/password_reset_verify.html')
+
+def resend_otp(request):
+    full_email = request.session.get('reset_email')
+    if not full_email:
+        return redirect('password_reset_request')
+
+    # Generate new OTP and Timestamp
+    otp = str(random.randint(100000, 999999))
+    request.session['reset_otp'] = otp
+    request.session['otp_created_at'] = time.time()
+
+    send_mail(
+        'New Security Verification Code',
+        f'Your new 6-digit verification code is: {otp}. It expires in 5 minutes.',
+        'noreply@system.com',
+        [full_email],
+        fail_silently=False,
+    )
+    messages.success(request, "A new code has been sent to your email.")
+    return redirect('verify_otp')
+
+# STEP 4: Set New Password
+def set_new_password(request):
+    if not request.session.get('otp_verified'):
+        return redirect('password_reset_request')
+
+    if request.method == "POST":
+        pw1 = request.POST.get('new_password')
+        pw2 = request.POST.get('confirm_password')
+        
+        if pw1 == pw2:
+            user = User.objects.get(id=request.session.get('reset_user_id'))
+            user.set_password(pw1)
+            user.save()
+            request.session.flush() 
+            messages.success(request, "Password reset successful! Please login.")
+            return redirect('admin_login')
+        else:
+            messages.error(request, "Passwords do not match.")
+
+    return render(request, 'analysis/password_set_new.html')
+
+@login_required
+def admin_profile(request):
+    # Initialize form with the current user
+    password_form = PasswordChangeForm(request.user)
+
+    if request.method == 'POST':
+        # Check if the Password Change form was submitted
+        if 'update_password' in request.POST:
+            password_form = PasswordChangeForm(request.user, request.POST)
+            
+            if password_form.is_valid():
+                # 1. Save the new password to the database
+                user = password_form.save()
+                
+                # 2. CRITICAL: Update the session so the user isn't logged out
+                # This links the new password hash to the current browser session
+                update_session_auth_hash(request, user)
+                
+                messages.success(request, 'Your password has been updated successfully!')
+                return redirect('admin_profile')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+
+        # Email update logic...
+        elif 'update_email' in request.POST:
+            new_email = request.POST.get('email_address')
+            request.user.email = new_email
+            request.user.save()
+            messages.success(request, 'Email updated!')
+            return redirect('admin_profile')
+
+    return render(request, 'analysis/admin_profile.html', {'password_form': password_form})
+
+@login_required
+def view_audit_log(request):
+    # Only allow Superadmins to see this page
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied.")
         return redirect("admin_dashboard")
 
-    return render(request, "analysis/admin_login.html")
+    # Start with all logs, ordered by newest first
+    logs = AuditTrail.objects.all().order_by('-timestamp')
+
+    # Fetch the search query from the URL (e.g., ?q=admin)
+    q = request.GET.get('q')
+    if q:
+        logs = logs.filter(
+            models.Q(username_display__icontains=q) | 
+            models.Q(description__icontains=q) |
+            models.Q(module__icontains=q) |
+            models.Q(action_type__icontains=q)
+        )
+
+    return render(request, 'analysis/audit_log.html', {'logs': logs})
+
+def record_audit(request, action_type, module, description):
+    """
+    Utility to log actions in the AuditTrail model.
+    """
+    # Capture the IP Address
+    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+    
+    # Import the model here to avoid circular imports if necessary
+    from .models import AuditTrail 
+
+    AuditTrail.objects.create(
+        user=request.user if request.user.is_authenticated else None,
+        username_display=request.user.username if request.user.is_authenticated else "Anonymous",
+        action_type=action_type,
+        module=module,
+        description=description,
+        ip_address=ip.split(',')[0] # Get the first IP if behind a proxy
+    )
+    
 # --- optional models (avoid crash if not available) ---
 try:
     from .models import ScanResult
@@ -656,7 +906,7 @@ from django.contrib import messages
 from django.db.models import Count
 from django.utils import timezone
 from .models import (
-    Student, Teacher, ScanResult, Subject, GradingPeriod, Grade, Section
+    Student, Teacher, ScanResult, Subject, GradingPeriod, Grade, Section, AuditTrail
 )
 from .forms import GradingPeriodForm, GradeForm
 from django.db.models import Prefetch
@@ -1036,6 +1286,7 @@ def admin_dashboard(request):
     total_students = Student.objects.filter(institution=institution, school_year=viewing_year).count()
     total_subjects = Subject.objects.filter(grade__institution=institution).count()
     total_reports = ScanResult.objects.filter(institution=institution, school_year=viewing_year).count()
+    logs = AuditTrail.objects.all().order_by('-timestamp')[:10]
 
     context = {
         "institution_name": getattr(institution, "name", ""),
@@ -1060,6 +1311,7 @@ def admin_dashboard(request):
         "form": AddUserForm(institution=institution),
         "current_date": timezone.now().date(),
         "teachers": teachers,
+        'logs': logs,
     }
 
     return render(request, "analysis/admin_dashboard.html", context)
@@ -2621,6 +2873,7 @@ def user_login(request):
 
             # login
             login(request, user)
+            record_audit(request, 'LOGIN', 'Authentication', f"User {user.username} logged in.")
 
             # store institution context (optional but helpful)
             request.session["institution_id"] = teacher.institution_id
@@ -3235,6 +3488,9 @@ def upload_answer_key(request):
             quiz_name=quiz_name,
             defaults=defaults,
         )
+        
+        action = 'ADD' if created else 'EDIT'
+        record_audit(request, action, 'Answer Key', f"User {request.user.username} {action.lower()}ed answer key: {quiz_name}")
 
         msg = "Answer Key saved!" if created else "Answer Key updated!"
         messages.success(request, f"{msg} Assessment: {quiz_name}")
@@ -3468,6 +3724,7 @@ def user_profile(request):
         if password_form.is_valid():
             user = password_form.save()
             update_session_auth_hash(request, user)
+            record_audit(request, 'EDIT', 'Profile', f"User {request.user.username} updated their password.")
             messages.success(request, "Your password has been updated successfully.")
             return redirect("user_profile")
         else:
@@ -3797,6 +4054,9 @@ def edit_answer_key(request, pk):
 
         # 6. Final Save
         key.save()
+        
+        record_audit(request, 'EDIT', 'Answer Key', f"User {request.user.username} updated answer key metadata for: {key.quiz_name}")
+        
         messages.success(request, f"Assessment '{quiz_name}' updated successfully.")
         
     except Exception as e:
@@ -3809,6 +4069,9 @@ def delete_answer_key(request, pk):
     key = get_object_or_404(AnswerKey, pk=pk, user=request.user)
     if request.method == "POST":
         key.delete()
+        
+        record_audit(request, 'DELETE', 'Answer Key', f"User {request.user.username} deleted assessment: {quiz_name}")
+        
         messages.success(request, "Upload deleted successfully.")
     return redirect("upload_answer_key")
 
@@ -4109,6 +4372,9 @@ def scan_document(request, pk):
                 score=score,
                 max_score=max_score,
             )
+            
+        action = 'EDIT' if mode == "rescan" else 'ADD'
+        record_audit(request, action, 'Scanner', f"User {request.user.username} {action.lower()}ed scan result for {student_name} on Quiz: {assessment_title}")
 
         return _redirect_to_matrix(f"Scan saved for {student_name} — {assessment_title}.")
 
@@ -4859,86 +5125,54 @@ def build_gp_buttons(gp_list, selected_gp):
 
 @login_required
 def students_view(request):
-    teacher = (
-        Teacher.objects
-        .select_related("institution")
-        .filter(user=request.user)
-        .first()
-    )
-
+    teacher = Teacher.objects.select_related("institution").filter(user=request.user).first()
     institution = get_current_institution(request) or getattr(teacher, "institution", None)
+    
     if not institution or not teacher:
-        messages.error(request, "Teacher account / institution context not found.")
+        messages.error(request, "Context not found.")
         return redirect("user_dashboard")
 
     academic_year = getattr(institution, "school_year", None)
-
-    assigned_qs = (
-        TeacherClassAssignment.objects
-        .select_related("grade", "section")
-        .filter(
-            teacher=teacher,
-            institution=institution,
-            school_year=academic_year,
-        )
+    assigned_qs = TeacherClassAssignment.objects.filter(
+        teacher=teacher, institution=institution, school_year=academic_year
     )
-
     allowed_section_ids = list(assigned_qs.values_list("section_id", flat=True).distinct())
 
     if request.method == "POST":
-        editing_student_id = request.POST.get("student_id") or None
+        editing_id = request.POST.get("student_id")
         instance = None
+        
+        if editing_id:
+            instance = get_object_or_404(Student, id=editing_id, section_id__in=allowed_section_ids)
 
-        if editing_student_id:
-            instance = get_object_or_404(
-                Student,
-                id=editing_student_id,
-                section_id__in=allowed_section_ids,
-            )
-
-        # Teacher can only add students to their own assigned sections
         section_id = request.POST.get("section")
         if section_id and int(section_id) not in set(allowed_section_ids):
-            messages.error(request, "You are not allowed to add students to that section.")
+            messages.error(request, "Unauthorized section.")
             return redirect("user_dashboard")
 
         form = StudentForm(request.POST, instance=instance)
-
         if form.is_valid():
             obj = form.save(commit=False)
-
-            # --- GENDER LOGIC FIX ---
-            # Capture the gender from the dropdown added to the template
-            gender_val = request.POST.get("gender")
-            if gender_val:
-                # Check if your model uses 'gender' or 'sex' field name
-                if hasattr(obj, "gender"):
-                    obj.gender = gender_val
-                elif hasattr(obj, "sex"):
-                    obj.sex = gender_val
-
-            # Attach institution & school year metadata
-            if hasattr(obj, "institution"):
-                obj.institution = institution
-            if hasattr(obj, "school_year") and academic_year:
-                obj.school_year = academic_year
+            # Logic to determine if this is ADD or EDIT
+            is_edit = instance is not None 
             
-            # Ensure the grade is set based on the chosen section
-            if hasattr(obj, "grade") and obj.section:
-                obj.grade = obj.section.grade
-
+            if hasattr(obj, "institution"): obj.institution = institution
+            if hasattr(obj, "school_year"): obj.school_year = academic_year
+            
             obj.save()
+
+            # --- AUDIT LOG INSERTION ---
+            action_type = 'EDIT' if is_edit else 'ADD'
+            description = f"{action_type} student: {obj.full_name} {obj.last_name} in Section ID {obj.section_id}"
+            record_audit(request, action_type, 'Students', description)
+            # ---------------------------
+
             messages.success(request, "Student saved successfully.")
             return redirect("user_dashboard")
 
-        # If form is invalid, show errors
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
-        
-        return redirect("user_dashboard")
-
+        messages.error(request, "Invalid form data.")
     return redirect("user_dashboard")
+
 # helper regex
 RE_NUMBERED = re.compile(r"^\s*(\d+)\s*[\.\)\-:]\s*(.+)$")  # 1. Name / 1) Name / 1- Name / 1: Name
 RE_ANY_NUMBER_IN_LINE = re.compile(r"(\d+\s*[\.\)\-:]\s*)")  # used to strip anything before first number
@@ -5265,6 +5499,14 @@ def import_students_view(request):
         if updated_count:
             msg += f" and updated gender for {updated_count} student(s)"
         msg += f" into {grade.name} - {section.name}."
+        
+        record_audit(
+            request, 
+            'ADD', 
+            'Students', 
+            f"Bulk Import: {msg} via file '{uploaded_file.name}'"
+        )
+        
         messages.success(request, msg)
     else:
         messages.info(request, "No new students were imported (they may already exist).")
@@ -5281,7 +5523,6 @@ def delete_student(request, student_id):
         return redirect("user_dashboard")
 
     academic_year = getattr(institution, "school_year", None)
-
     assigned_qs = TeacherClassAssignment.objects.filter(
         teacher=teacher,
         institution=institution,
@@ -5289,9 +5530,18 @@ def delete_student(request, student_id):
     )
     allowed_section_ids = list(assigned_qs.values_list("section_id", flat=True).distinct())
 
+    # Ensure teacher owns this student record
     student = get_object_or_404(Student, id=student_id, section_id__in=allowed_section_ids)
-    student.delete()
+    
+    # --- AUDIT LOG INSERTION ---
+    # Capture info before deletion
+    student_info = f"{student.full_name} {student.last_name} (Section: {student.section.name})"
+    
+    record_audit(request, 'DELETE', 'Students', f"Deleted student: {student_info}")
+    # ---------------------------
 
+    student.delete()
+    messages.success(request, "Student record deleted.")
     return redirect("user_dashboard")
 
 def _safe_filename(s: str) -> str:
@@ -5499,7 +5749,6 @@ def delete_all_students_section(request, section_id):
 
     messages.success(request, f"Successfully deleted all {deleted_count} students from this section.")
     return redirect("user_dashboard")
-
 # if num_items <= 10: template_file = "1-10 items.pdf"
 #     elif num_items <= 15: template_file = "1-15items.pdf"
 #     elif num_items <= 20: template_file = "1-20items.pdf"
