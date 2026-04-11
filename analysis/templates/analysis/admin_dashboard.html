@@ -1395,11 +1395,8 @@
                     <input type="date" id="dateTo" style="padding: 5px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.8rem;">
                 </div>
 
-                <button type="button" onclick="filterAuditTable()" class="btnP" style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                    Filter
-                </button>
                 
-                <button type="button" onclick="clearFilters()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem;">
+                <button type="button" onclick="clearFilters()" style= "padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
                     Clear
                 </button>
                 
@@ -1407,15 +1404,15 @@
             </div>
         </div>
 
-        <div class="log-card" style="border: 1px solid #f1f5f9; border-radius: 12px; overflow: hidden;">
-            <div style="overflow-x: auto;">
+        <div class="log-card" style="border: 1px solid #f1f5f9; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
                 <table class="table-audit" style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <thead>
-                        <tr style="background: #f8fafc;">
-                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">Timestamp</th>
-                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">User</th>
-                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">Action</th>
-                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0;">Description</th>
+                        <tr style="background: #f8fafc; position: sticky; top: 0; z-index: 10;">
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0; background: #f8fafc;">Timestamp</th>
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0; background: #f8fafc;">User</th>
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0; background: #f8fafc;">Action</th>
+                            <th style="padding: 12px; text-align: left; color: #64748b; border-bottom: 2px solid #e2e8f0; background: #f8fafc;">Description</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1444,11 +1441,6 @@
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-            <div style="padding: 15px; text-align: center; background: #f8fafc; border-top: 1px solid #e2e8f0;">
-                <a href="{% url 'view_audit_log' %}" style="color: #6366f1; font-weight: 700; text-decoration: none; font-size: 0.85rem;">
-                    View Full System Logs <i class="fas fa-external-link-alt" style="font-size: 0.7rem; margin-left: 5px;"></i>
-                </a>
             </div>
         </div>
     </div>
@@ -2275,56 +2267,56 @@ function filterTable() {
     }
 }
 
-// Optional: Search as you type
-document.getElementById("auditSearchInput").addEventListener("keyup", filterTable);
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById("auditSearchInput");
+    const dateFrom = document.getElementById("dateFrom");
+    const dateTo = document.getElementById("dateTo");
+
+    // "input" event covers typing, pasting, and date selection
+    searchInput.addEventListener("input", filterAuditTable);
+    dateFrom.addEventListener("input", filterAuditTable);
+    dateTo.addEventListener("input", filterAuditTable);
+});
 
 function filterAuditTable() {
     const searchText = document.getElementById("auditSearchInput").value.toLowerCase();
-    const dateFrom = document.getElementById("dateFrom").value; // Format: YYYY-MM-DD
-    const dateTo = document.getElementById("dateTo").value;     // Format: YYYY-MM-DD
+    const dateFromValue = document.getElementById("dateFrom").value; 
+    const dateToValue = document.getElementById("dateTo").value;
     
     const table = document.querySelector(".table-audit");
-    const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+    // Target the tbody rows specifically to avoid header issues
+    const rows = table.querySelectorAll("tbody tr");
 
-    for (let i = 0; i < rows.length; i++) {
-        const cells = rows[i].getElementsByTagName("td");
-        if (cells.length < 4) continue; // Skip "No activity found" row
+    // Convert filter dates to objects once outside the loop for better performance
+    const fromDateObj = dateFromValue ? new Date(dateFromValue).setHours(0,0,0,0) : null;
+    const toDateObj = dateToValue ? new Date(dateToValue).setHours(0,0,0,0) : null;
+
+    rows.forEach(row => {
+        const cells = row.getElementsByTagName("td");
+        if (cells.length < 4) return; // Skip "No activity found" row
 
         // 1. Text Search Logic
-        const rowText = rows[i].textContent.toLowerCase();
+        const rowText = row.textContent.toLowerCase();
         const matchesText = rowText.includes(searchText);
 
         // 2. Date Logic
-        // We extract the date. Django outputs "M d, Y" usually. 
-        // To make it comparable, we convert the cell text to a JS Date object.
-        const dateCellText = cells[0].innerText; // e.g., "Oct 24, 2023"
-        const rowDate = new Date(dateCellText);
-        rowDate.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
+        const dateCellText = cells[0].innerText; // Expecting "Oct 24, 2023"
+        const rowDate = new Date(dateCellText).setHours(0,0,0,0);
 
         let matchesDate = true;
+        if (fromDateObj && rowDate < fromDateObj) matchesDate = false;
+        if (toDateObj && rowDate > toDateObj) matchesDate = false;
 
-        if (dateFrom) {
-            const from = new Date(dateFrom);
-            from.setHours(0, 0, 0, 0);
-            if (rowDate < from) matchesDate = false;
-        }
-
-        if (dateTo) {
-            const to = new Date(dateTo);
-            to.setHours(0, 0, 0, 0);
-            if (rowDate > to) matchesDate = false;
-        }
-
-        // Show row only if BOTH text and date conditions are met
-        rows[i].style.display = (matchesText && matchesDate) ? "" : "none";
-    }
+        // Show/Hide based on both conditions
+        row.style.display = (matchesText && matchesDate) ? "" : "none";
+    });
 }
 
 function clearFilters() {
     document.getElementById("auditSearchInput").value = "";
     document.getElementById("dateFrom").value = "";
     document.getElementById("dateTo").value = "";
-    filterAuditTable(); // Reset table view
+    filterAuditTable(); 
 }
 </script>
 
