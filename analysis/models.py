@@ -463,6 +463,7 @@ class AuditTrail(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    institution = models.ForeignKey(Institution, on_delete=models.CASCADE, null=True, blank=True)
     username_display = models.CharField(max_length=150) # Backup if user is deleted
     action_type = models.CharField(max_length=10, choices=ACTION_CHOICES)
     module = models.CharField(max_length=100) # e.g., "Students", "Answer Key"
