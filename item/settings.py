@@ -28,11 +28,11 @@ SECRET_KEY = 'django-insecure-yzoy$ls^u(^(_=cw_mrj#^%^r-@d6ssr#&i7folp(==5p8vi*)
 DEBUG = os.environ.get('DATABASE_URL') is None
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://bubble-visionss-production.up.railway.app",
+    "https://bubblevision.up.railway.app",
 ]
 
 ALLOWED_HOSTS = [
-"bubble-visionss-production.up.railway.app",
+"bubblevision.up.railway.app",
     "127.0.0.1",
     "localhost",
 ]
