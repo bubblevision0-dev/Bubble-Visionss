@@ -238,41 +238,57 @@
 
   <!-- ===== ITEM ANALYSIS TABLE ===== -->
   <div class="ak-card" style="margin-top:16px;">
-    {% if total_students == 0 %}
-      <p class="empty-message">
-        No scanned sheets yet. Scan at least one bubble sheet to see item analysis.
-      </p>
-    {% elif not item_stats %}
-      <p class="empty-message">
-        No answer key items found. Please set up the answer key first.
-      </p>
-    {% else %}
-      <div class="table-container" style="overflow-x:auto;">
-        <table class="table table-sm" style="width:100%; font-size:0.9rem;">
-          <thead>
-            <tr>
-              <th style="white-space:nowrap;">Item #</th>
-              <th style="white-space:nowrap;">Correct Answer</th>
-              <th style="white-space:nowrap;"># Correct</th>
-              <th style="white-space:nowrap;">% Correct</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in item_stats %}
-              <tr>
-                <td>{{ item.number }}</td>
-                <td>{{ item.correct_choice }}</td>
-                <td>{{ item.n_correct }}</td>
-                <td>{{ item.percent|floatformat:1 }}%</td>
-
-          
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% endif %}
-  </div>
+  {% if total_students == 0 %}
+    <p class="empty-message">
+      No scanned sheets yet. Scan at least one bubble sheet to see item analysis.
+    </p>
+  {% elif not item_stats %}
+    <p class="empty-message">
+      No answer key items found. Please set up the answer key first.
+    </p>
+  {% else %}
+    <div class="table-container" style="overflow-x:auto;">
+      <table class="table table-sm" style="width:100%; font-size:0.9rem;">
+        <thead>
+          <tr>
+            <th style="white-space:nowrap;">Item #</th>
+            <th style="white-space:nowrap;">Correct Answer</th>
+            <th style="white-space:nowrap;"># Correct</th>
+           <!-- <th style="white-space:nowrap;">% Correct</th>
+            <th style="white-space:nowrap;">Difficulty</th>
+            <th style="white-space:nowrap;">Action</th>-->
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in item_stats %}
+<tr>
+    <td>{{ item.number }}</td>
+    <td>{{ item.correct_choice }}</td>
+    <td>{{ item.n_correct }}</td>
+   <!-- <td>{{ item.percent|floatformat:1 }}%</td>
+    <td>
+        {% if item.percent > 75 %}
+            <span class="easy">Very Easy</span>
+        {% elif item.percent >= 30 %}
+            <span class="moderate">Optimal</span>
+        {% else %}
+            <span class="difficult">Poor (Too Hard)</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if item.percent < 25 or item.percent > 90 %}
+            <span class="revise">REVISE</span>
+        {% else %}
+            <span class="retain">RETAIN</span>
+        {% endif %}
+    </td>-->
+</tr>
+{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
 
 </div>
 
