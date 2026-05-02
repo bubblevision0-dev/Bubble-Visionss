@@ -65,9 +65,22 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'analysis.middleware.DisableClientSideCachingMiddleware',
 ]
 
+LOGIN_URL = 'user_login'
+
 ROOT_URLCONF = 'item.urls'
+
+# The session expires as soon as the user closes the browser/tab
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Ensure the session doesn't "hang around" on the server
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Security hardening
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True  # Use True if you have HTTPS
 
 TEMPLATES = [
     {
