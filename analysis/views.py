@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm
@@ -120,6 +121,15 @@ def get_knn():
 
     return KNN_MODEL, KNN_CLASS_NAMES, KNN_IMG_SIZE, KNN_CAL
 
+def is_superuser(user):
+    return user.is_authenticated and user.is_superuser
+
+def is_admin(user):
+    return user.is_authenticated and (user.is_staff and not user.is_superuser)
+
+def is_regular_user(user):
+    return user.is_authenticated and not user.is_staff
+    
 # Super Admin Login
 def super_admin_login(request):
     if request.method == "POST":
@@ -140,7 +150,8 @@ def super_admin_login(request):
 # Super Admin Logout
 def super_admin_logout(request):
     logout(request)
-    return redirect('super_admin_login')  # Redirect to login after logout
+    request.session.flush() 
+    return redirect('super_admin_login')
 
 # Admin Login for Institution Admin
 def institution_admin_login(request):
@@ -167,6 +178,8 @@ def institution_admin_login(request):
     return render(request, "institution_admin/admin_login.html")  # Correct template path
 
 @login_required
+@user_passes_test(is_superuser, login_url='super_admin_login')
+@never_cache
 def institution_admin_dashboard(request):
     if not request.user.is_superuser:
         return HttpResponse("Unauthorized", status=403)
@@ -928,6 +941,8 @@ def _get_teacher_or_403(request, institution):
     return teacher
 
 @login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@never_cache
 def admin_dashboard(request):
     institution = get_current_institution(request)
     if not institution:
@@ -1962,7 +1977,8 @@ def archive_detail(request, sy, grade_id, section_id, subject_id):
 @login_required
 def admin_logout(request):
     logout(request)
-    return redirect("admin_login")
+    request.session.flush()
+    return redirect('admin_login')
 
 
 @login_required
@@ -2891,7 +2907,8 @@ def user_login(request):
 @login_required
 def user_logout(request):
     logout(request)
-    return redirect("user_login")
+    request.session.flush()
+    return redirect('user_login')
 
 
 
@@ -2991,6 +3008,8 @@ def get_answerkey_max(answer_key):
         return 0.0
 
 @login_required
+@user_passes_test(is_regular_user, login_url='user_login')
+@never_cache
 def user_dashboard(request):
     teacher = (
         Teacher.objects.select_related("institution")
