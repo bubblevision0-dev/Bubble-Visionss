@@ -886,6 +886,9 @@
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
 <script>
   const ASSIGNMENTS = {{ assigned_classes_json|safe }};
@@ -2496,44 +2499,79 @@ window.addEventListener("pageshow", function (e) {
 });
 
 // ✅ ADDED: Export PDF for Tally Per Item (same behavior as print → Save as PDF)
-function exportTallyPerItemPDF(){
-  printTallyPerItem();
-}
-
-// ✅ ADDED: Export Excel for Tally Per Item (exports the table inside iframe as CSV)
-function exportTallyPerItemExcel(){
+function exportTallyPerItemPDF() {
+  const { jsPDF } = window.jspdf;
   const frame = document.getElementById("tallyPerItemFrame");
-  if (!frame || !frame.contentWindow || !frame.contentDocument){
+
+  if (!frame || !frame.contentDocument) {
     alert("Tally page not ready yet.");
     return;
   }
 
-  const doc = frame.contentDocument;
-  const table = doc.querySelector("table");
-  if (!table){
+  const table = frame.contentDocument.querySelector("table");
+  if (!table) {
     alert("No table found to export.");
     return;
   }
 
-  const rows = Array.from(table.querySelectorAll("tr"));
-  const csvLines = rows.map(tr => {
-    const cells = Array.from(tr.querySelectorAll("th,td")).map(td => {
-      let text = (td.innerText || "").trim();
-      text = text.replace(/"/g, '""');
-      return `"${text}"`;
-    });
-    return cells.join(",");
+  const subtitle = (document.getElementById("tallyPerItemSubtitle")?.textContent || "Tally Per Item").trim();
+  
+  // 1. Create PDF (Portrait, Millimeters, A4)
+  const doc = new jsPDF('p', 'mm', 'a4');
+
+  // 2. Add a Title to the PDF
+  doc.setFontSize(16);
+  doc.text(subtitle, 14, 15);
+
+  // 3. Use AutoTable to grab the HTML table and format it
+  doc.autoTable({
+    html: table,
+    startY: 25,          // Start after the title
+    theme: 'grid',       // Clean table lines
+    headStyles: { fillColor: [15, 23, 42] }, // Slate color matching your buttons
+    styles: { fontSize: 9, cellPadding: 2 },
+    margin: { top: 20 },
+    didParseCell: function (data) {
+      // Optional: Force text wrapping if columns are too wide
+      data.cell.styles.cellWidth = 'auto';
+    }
   });
 
-  const csv = csvLines.join("\n");
-
-  // filename using subtitle (Assessment name)
-  const subtitle = (document.getElementById("tallyPerItemSubtitle")?.textContent || "Tally Per Item")
-    .replace(/[\\/:*?"<>|]/g, "-");
-
-  downloadTextFile(csv, `${subtitle}.csv`, "text/csv;charset=utf-8;");
+  // 4. Save
+  const fileName = subtitle.replace(/[\\/:*?"<>|]/g, "-");
+  doc.save(`${fileName}.pdf`);
 }
 
+
+// ✅ ADDED: Export Excel for Tally Per Item (exports the table inside iframe as CSV)
+function exportTallyPerItemExcel() {
+  const frame = document.getElementById("tallyPerItemFrame");
+  if (!frame || !frame.contentDocument) {
+    alert("Tally page not ready yet.");
+    return;
+  }
+
+  const table = frame.contentDocument.querySelector("table");
+  if (!table) {
+    alert("No table found to export.");
+    return;
+  }
+
+  // 1. Get the filename from the subtitle
+  const subtitle = (document.getElementById("tallyPerItemSubtitle")?.textContent || "Tally_Per_Item")
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, "-");
+
+  // 2. Convert the HTML table to a SheetJS worksheet
+  const worksheet = XLSX.utils.table_to_sheet(table);
+
+  // 3. Create a new Workbook
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Tally Results");
+
+  // 4. Generate and download the .xlsx file
+  XLSX.writeFile(workbook, `${subtitle}.xlsx`);
+}
 </script>
 
 <script>
